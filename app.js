@@ -1,6 +1,6 @@
 // app.js
 
-// Helper: format a Date as 'MMM DD, YY' (but output 'Mon DD YY')
+// Helper: format a Date as 'MMM DD YY' (e.g., 'Apr 28 25')
 function formatDateShort(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const day = String(d.getUTCDate()).padStart(2, '0');
@@ -9,7 +9,7 @@ function formatDateShort(d) {
   return `${mon} ${day} ${yy}`;
 }
 
-// Helper: format a Date as 'MMM DD, YYYY' -> 'Mon DD YYYY'
+// Helper: format a Date as 'MMM DD YYYY' (e.g., 'Apr 28 2025')
 function formatDateFull(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const day = String(d.getUTCDate()).padStart(2, '0');
@@ -42,24 +42,30 @@ sendBtn.addEventListener('click', onSendAll);
 
 // 1. Load the workbook and detect header/date rows
 function onFileLoad(e) {
-  const file = e.target.files[0]; if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = evt => {
     const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array', cellDates: true });
     workbookGlobal = wb;
     const ws = wb.Sheets['Schedule'];
-    if (!ws) return alert('Schedule tab not found.');
+    if (!ws) {
+      alert('Schedule tab not found.');
+      return;
+    }
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     const headerIndex = arr.findIndex(r => r.includes('Team') && r.includes('Email') && r.includes('Employee'));
-    if (headerIndex < 1) return alert('Header row not detected.');
-    // build dateRow from row above header, normalize to short strings
+    if (headerIndex < 1) {
+      alert('Header row not detected.');
+      return;
+    }
+    // dateRow is row above headerIndex
     dateRow = (arr[headerIndex - 1] || []).map(cell => {
       const d = cell instanceof Date ? cell : new Date(cell);
       return isNaN(d) ? String(cell).trim() : formatDateShort(d);
     });
     headerRow = arr[headerIndex] || [];
     rawRows   = arr.slice(headerIndex + 1);
-    // reset UI
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate Preview.</p>';
     generateBtn.disabled = false;
     downloadBtn.disabled = true;
@@ -71,37 +77,47 @@ function onFileLoad(e) {
 // 2. Generate preview using correct date indexing
 function onGeneratePreview() {
   const startVal = weekStartInput.value;
-  if (!startVal) return alert('Please select a Week Start date.');
+  if (!startVal) {
+    alert('Please select a Week Start date.');
+    return;
+  }
   const [y, m, d] = startVal.split('-').map(Number);
-  // create local date without timezone shift
   const startDate = new Date(Date.UTC(y, m - 1, d));
-  // build short-format date labels array
+
+  // Build 5-day sequences in short format
   const labelsShort = Array.from({ length: 5 }, (_, i) => {
     const dt = new Date(startDate);
     dt.setUTCDate(dt.getUTCDate() + i);
     return formatDateShort(dt);
   });
-  // find start index in dateRow
   const startIdx = dateRow.indexOf(labelsShort[0]);
-  if (startIdx < 0) return alert(`Date ${labelsShort[0]} not found in schedule date row.`);
-  // collect five consecutive date column indices
-  const dateIndices = [0,1,2,3,4].map(i => startIdx + i).filter(i => i < dateRow.length && i >= 0);
-  // build full-format labels for header row
+  if (startIdx < 0) {
+    alert(`Date ${labelsShort[0]} not found in schedule date row.`);
+    return;
+  }
+  const dateIndices = [0,1,2,3,4].map(i => startIdx + i).filter(i => i < dateRow.length);
+
+  // Build full-year labels for headers
   const labelsFull = dateIndices.map((_, i) => {
     const dt = new Date(startDate);
     dt.setUTCDate(dt.getUTCDate() + i);
     return formatDateFull(dt);
   });
-  // find Team, Email, Employee columns
+
+  // Find Team, Email, Employee columns in headerRow
   const teamIdx  = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
   const empIdx   = headerRow.indexOf('Employee');
-  if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) return alert('Missing Team/Email/Employee columns.');
-  // set preview headers
+  if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) {
+    alert('Missing Team/Email/Employee columns.');
+    return;
+  }
+
+  // Set up selectedHeaders
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
-  // filter and map rows
-  scheduleData = rawRows
-    .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
+
+  // Filter and map rawRows to scheduleData
+  scheduleData = rawRows.filter(r => r[teamIdx] && r[teamIdx] !== 'X')
     .map(r => {
       const obj = {
         [headerRow[emailIdx]]: r[emailIdx],
@@ -110,35 +126,54 @@ function onGeneratePreview() {
       dateIndices.forEach((ci, j) => { obj[labelsFull[j]] = r[ci] || ''; });
       return obj;
     });
-  // render preview
+
+  // Render preview table
   previewContainer.innerHTML = '';
-  if (!scheduleData.length) return previewContainer.textContent = 'No matching rows for the selected week.';
+  if (scheduleData.length === 0) {
+    previewContainer.textContent = 'No matching rows for the selected week.';
+    return;
+  }
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const thr = document.createElement('tr');
-  selectedHeaders.forEach(h => { const th = document.createElement('th'); th.textContent = h; thr.appendChild(th); });
-  thead.appendChild(thr); table.appendChild(thead);
+  const thr   = document.createElement('tr');
+  selectedHeaders.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    thr.appendChild(th);
+  });
+  thead.appendChild(thr);
+  table.appendChild(thead);
   const tbody = document.createElement('tbody');
-  scheduleData.forEach(r => {
+  scheduleData.forEach(row => {
     const tr = document.createElement('tr');
-    selectedHeaders.forEach(h => { const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td); });
+    selectedHeaders.forEach(h => {
+      const td = document.createElement('td');
+      td.textContent = row[h] || '';
+      tr.appendChild(td);
+    });
     tbody.appendChild(tr);
   });
-  table.appendChild(tbody); previewContainer.appendChild(table);
-  // enable download
+  table.appendChild(tbody);
+  previewContainer.appendChild(table);
+
+  // Enable Download Template button
   downloadBtn.disabled = false;
   sendBtn.disabled = true;
 }
 
-// 3. Download the updated Weekly Template sheet on demand
+// 3. Download the updated Weekly Template sheet when clicked
 function onDownloadTemplate() {
   if (!workbookGlobal) return;
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
   workbookGlobal.Sheets['Weekly Template'] = ws;
-  if (!workbookGlobal.SheetNames.includes('Weekly Template')) workbookGlobal.SheetNames.push('Weekly Template');
+  if (!workbookGlobal.SheetNames.includes('Weekly Template')) {
+    workbookGlobal.SheetNames.push('Weekly Template');
+  }
   XLSX.writeFile(workbookGlobal, 'WeeklyTemplate.xlsx');
   sendBtn.disabled = false;
 }
 
 // 4. Stub send all emails
-function onSendAll() { alert(`Would send ${scheduleData.length} emails for the selected week.`); }
+function onSendAll() {
+  alert(`Would send ${scheduleData.length} emails for the selected week.`);
+}
