@@ -1,22 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Schedule Mailer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    label { margin-right: 1em; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #333; padding: 4px 8px; text-align: left; }
+    th { background: #f0f0f0; }
+    #controls { margin-bottom: 1em; }
+  </style>
 </head>
 <body>
   <h1>Schedule Mailer</h1>
 
-  <label>Week Start: <input type="date" id="weekStart" /></label>
-  <label>Week End:   <input type="date" id="weekEnd"   /></label>
-  <br/><br/>
+  <div id="controls">
+    <label for="weekStart">Week Start:</label>
+    <input type="date" id="weekStart" />
+    <label for="weekEnd">Week End:</label>
+    <input type="date" id="weekEnd" />
+    <label for="fileInput">Upload Schedule (.xlsx):</label>
+    <input type="file" id="fileInput" accept=".xlsx" />
+    <button id="sendAll" disabled>Send All</button>
+  </div>
 
-  <input type="file" id="fileInput" accept=".xlsx"/>
   <div id="preview"></div>
-  <button id="sendAll" disabled>Send All</button>
 
+  <!-- SheetJS library for Excel parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- Your client logic -->
   <script src="app.js"></script>
 </body>
-
 </html>
