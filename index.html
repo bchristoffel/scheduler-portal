@@ -63,6 +63,12 @@
       font-size: 2rem;
     }
 
+    /* Logo at top */
+    .logo {
+      max-height: 40px;
+      margin-bottom: 1rem;
+    }
+
     /* Tabs */
     .tabs {
       display: flex;
@@ -149,13 +155,15 @@
     th, td {
       border: 1px solid var(--gray-light);
       padding: 0.6rem 0.8rem;
-      /* default left-align data cells */
     }
   </style>
 </head>
 
 <body>
   <div class="container">
+    <!-- Company logo -->
+    <img src="AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="AutonomyWorks Logo" class="logo" />
+
     <h1>Schedule Mailer</h1>
 
     <div class="tabs">
@@ -190,6 +198,7 @@
     </div>
   </div>
 
+  <!-- Dependencies & Logic -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
   <script>
