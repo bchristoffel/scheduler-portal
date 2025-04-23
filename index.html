@@ -4,61 +4,48 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Schedule Mailer</title>
+
+  <!-- favicon so browsers stop 404ing -->
+  <link rel="icon" href="./AW_DIMENSIONAL_BLACK_HOR_2024.png" type="image/png" />
+
   <style>
     :root {
-      --mint:              #76C7B7;
-      --mint-dark:         #5fa695;
-      --gray-light:        #F2F2F2;
-      --gray-dark:         #333333;
-      --white:             #FFFFFF;
-      --midnight-overlay:  rgba(0, 0, 51, 0.4);
-      --radius:            10px;
-      --transition:        0.25s ease;
+      --mint:         #76C7B7;
+      --mint-dark:    #5fa695;
+      --white:        #FFFFFF;
+      --gray-bg:      #F7F9FA;    /* lighter gray for panels/cards */
+      --gray-lines:   #DDDDDD;    /* border color for grid lines */
+      --gray-dark:    #333333;
+      --midnight-overlay: rgba(0,0,51,0.4);
+      --radius:       10px;
+      --transition:   0.25s ease;
     }
 
-    /* Card outline & spacing */
-    .email-card {
-      border: 1px solid var(--gray-light);
-      border-radius: var(--radius);
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      background: var(--gray-light);        /* light-gray background */
-    }
-
-    /* Center table headers */
-    #preview table th,
-    #emailPreview table th {
-      text-align: center;
-    }
-
-    /* Full-page background + overlay */
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
       background:
-        linear-gradient(var(--midnight-overlay), var(--midnight-overlay)),
+        linear-gradient(var(--midnight-overlay),var(--midnight-overlay)),
         url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1920&q=80')
         no-repeat center/cover;
-      color: var(--gray-dark);
       display: flex;
       align-items: center;
       justify-content: center;
+      color: var(--gray-dark);
       padding: 2rem;
     }
 
-    /* Main white container */
     .container {
       background: var(--white);
       border-radius: var(--radius);
       max-width: 1400px;
       width: 100%;
-      box-shadow: 0 6px 30px rgba(0,0,0,0.3);
       padding: 3rem;
+      box-shadow: 0 6px 30px rgba(0,0,0,0.3);
       box-sizing: border-box;
     }
 
-    /* Header: logo above title, left-aligned */
     .header-row {
       display: flex;
       flex-direction: column;
@@ -72,25 +59,22 @@
     .header-row h1 {
       margin: 0;
       font-size: 2rem;
-      color: var(--gray-dark);
     }
 
-    /* Tabs */
     .tabs {
       display: flex;
-      border-bottom: 2px solid var(--gray-light);
+      border-bottom: 2px solid var(--gray-lines);
       margin-bottom: 1.5rem;
     }
     .tabs button {
-      background: var(--gray-light);
+      background: var(--gray-bg);
       border: none;
       padding: 0.7rem 1.4rem;
       cursor: pointer;
-      font-size: 1rem;
-      transition: background var(--transition);
       margin-right: 0.5rem;
       border-top-left-radius: var(--radius);
       border-top-right-radius: var(--radius);
+      transition: background var(--transition);
     }
     .tabs button.active {
       background: var(--white);
@@ -98,29 +82,27 @@
       box-shadow: inset 0 3px 0 var(--mint);
     }
     .tabs button:hover {
-      background: #e0e0e0;
+      background: #e2e6e8;
     }
     .tabcontent { display: none; }
     .tabcontent.active { display: block; }
 
-    /* Form */
     .field-group { margin-bottom: 1.2rem; }
     .field-group label {
       display: block;
-      margin-bottom: 0.3rem;
+      margin-bottom: 0.4rem;
       font-weight: 500;
     }
     .field-group input[type="date"],
     .field-group input[type="file"] {
       padding: 0.4rem 0.6rem;
-      border: 1px solid var(--gray-light);
+      border: 1px solid var(--gray-lines);
       border-radius: var(--radius);
       font-size: 1rem;
       display: block;
     }
     .field-group input[type="date"] { width: 170px; }
 
-    /* Buttons */
     .button-group { margin-bottom: 1.2rem; }
     .button {
       background: var(--mint);
@@ -143,23 +125,44 @@
       transform: translateY(-1px);
     }
 
-    /* Light-gray backgrounds for preview panels */
+    /* Panels: Weekly Template & Emails */
     #preview,
     #emailPreview {
-      background: var(--gray-light);
+      background: var(--gray-bg);
       padding: 1rem;
       border-radius: var(--radius);
     }
 
-    /* Tables */
-    table {
+    /* Weekly Template table with grid lines */
+    #preview table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1.5rem;
+      margin-top: 1rem;
     }
-    th, td {
-      border: 1px solid var(--gray-light);
+    #preview th,
+    #preview td {
+      border: 1px solid var(--gray-lines);
       padding: 0.6rem 0.8rem;
+    }
+    #preview th {
+      background: #fafafa;
+    }
+
+    /* Email cards */
+    .email-card {
+      background: var(--gray-bg);
+      border: 1px solid var(--gray-lines);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .email-card h3 {
+      margin-top: 0;
+    }
+
+    /* Center headers in email draft tables */
+    #emailPreview table th {
+      text-align: center;
     }
   </style>
 </head>
@@ -167,11 +170,7 @@
 <body>
   <div class="container">
     <div class="header-row">
-      <img
-        src="./AW_DIMENSIONAL_BLACK_HOR_2024.png"
-        alt="AutonomyWorks Logo"
-        class="logo"
-      />
+      <img src="./AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="AutonomyWorks Logo" class="logo" />
       <h1>Schedule Mailer</h1>
     </div>
 
@@ -180,7 +179,7 @@
       <button class="tablinks" data-tab="emails">Emails</button>
     </div>
 
-    <!-- Weekly Template Tab -->
+    <!-- Weekly Template -->
     <div id="weekly" class="tabcontent active">
       <div class="field-group">
         <label for="weekStart">Week Start:</label>
@@ -191,38 +190,27 @@
         <input type="file" id="fileInput" accept=".xlsx" />
       </div>
       <div class="button-group">
-        <button id="generateTemplate" class="button" disabled>
-          Generate Weekly Preview
-        </button>
-        <button id="copyAll" class="button" style="display:none;">
-          Copy All
-        </button>
+        <button id="generateTemplate" class="button" disabled>Generate Weekly Preview</button>
+        <button id="copyAll" class="button" style="display:none;">Copy All</button>
       </div>
       <div id="preview"></div>
     </div>
 
-    <!-- Emails Tab -->
+    <!-- Emails -->
     <div id="emails" class="tabcontent">
       <div class="button-group">
-        <button id="generateEmails" class="button" disabled>
-          Generate Email Drafts
-        </button>
-        <button id="sendAll" class="button" disabled>
-          Send All
-        </button>
+        <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
+        <button id="sendAll" class="button" disabled>Send All</button>
       </div>
       <div id="emailPreview"></div>
     </div>
   </div>
 
-  <!-- sheetjs for Excel parsing -->
+  <!-- Dependencies -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
-  <!-- MSAL.js for auth -->
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
-  <!-- Graph client -->
   <script type="module">
-   import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/lib/graph-js-sdk-web.js";
+    import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/lib/graph-js-sdk-web.js";
     window.GraphClient = Client.initWithMiddleware;
   </script>
 
@@ -231,10 +219,8 @@
   <script>
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.tablinks')
-                .forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tabcontent')
-                .forEach(tc => tc.classList.remove('active'));
+        document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tabcontent').forEach(tc => tc.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
       });
