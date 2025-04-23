@@ -46,7 +46,7 @@ function onFileLoad(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = evt => {
-    const wb = XLSX.read(evt.target.result, { type: 'array' });
+    const wb = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
     workbookGlobal = wb;
     const ws = wb.Sheets['Schedule'];
     if (!ws) {
@@ -84,6 +84,7 @@ function onGeneratePreview() {
   }
   const [y,m,d] = startVal.split('-').map(Number);
   const startDate = new Date(y, m - 1, d);
+
   // Build 5-day sequences short and full
   const labelsShort = [];
   const labelsFull  = [];
@@ -98,8 +99,9 @@ function onGeneratePreview() {
     alert(`Date ${labelsShort[0]} not found in schedule dates.`);
     return;
   }
-  const dateIndices = Array.from({length:5}, (_,i) => startIdx + i)
+  const dateIndices = Array.from({ length: 5 }, (_, i) => startIdx + i)
     .filter(idx => idx >= 0 && idx < dateRow.length);
+
   // Find key columns
   const teamIdx  = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
@@ -108,42 +110,50 @@ function onGeneratePreview() {
     alert('Missing Team/Email/Employee columns.');
     return;
   }
+
   // Prepare headers
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
-  // Build data
-  scheduleData = rawRows.filter(r => r[teamIdx] && r[teamIdx] !== 'X')
+
+  // Build data rows
+  scheduleData = rawRows
+    .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
     .map(r => {
       const obj = {
         [headerRow[emailIdx]]: r[emailIdx],
         [headerRow[empIdx]]:   r[empIdx]
       };
-      dateIndices.forEach((ci,j) => obj[labelsFull[j]] = r[ci] || '');
+      dateIndices.forEach((ci, j) => {
+        obj[labelsFull[j]] = r[ci] || '';
+      });
       return obj;
     });
-  // Render preview
+
+  // Render preview table
   previewContainer.innerHTML = '';
-  if (!scheduleData.length) {
+  if (scheduleData.length === 0) {
     previewContainer.textContent = 'No matching rows for the selected week.';
     return;
   }
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const thr = document.createElement('tr');
+  const headerRowEl = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th'); th.textContent = h; thr.appendChild(th);
+    const th = document.createElement('th'); th.textContent = h; headerRowEl.appendChild(th);
   });
-  thead.appendChild(thr);
+  thead.appendChild(headerRowEl);
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
   scheduleData.forEach(r => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = r[h]||''; tr.appendChild(td);
+      const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   previewContainer.appendChild(table);
+
+  // Enable Download Template button
   downloadBtn.disabled = false;
   sendBtn.disabled = true;
 }
@@ -153,7 +163,9 @@ function onDownloadTemplate() {
   if (!workbookGlobal) return;
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
   workbookGlobal.Sheets['Weekly Template'] = ws;
-  if (!workbookGlobal.SheetNames.includes('Weekly Template')) workbookGlobal.SheetNames.push('Weekly Template');
+  if (!workbookGlobal.SheetNames.includes('Weekly Template')) {
+    workbookGlobal.SheetNames.push('Weekly Template');
+  }
   XLSX.writeFile(workbookGlobal, 'WeeklyTemplate.xlsx');
   sendBtn.disabled = false;
 }
