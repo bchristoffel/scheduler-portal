@@ -25,7 +25,7 @@
       background: var(--white);
     }
 
-    /* Center table headers in both tabs */
+    /* Center table headers */
     #preview table th,
     #emailPreview table th {
       text-align: center;
@@ -110,19 +110,15 @@
       margin-bottom: 0.3rem;
       font-weight: 500;
     }
-    .field-group input[type="date"] {
+    .field-group input[type="date"],
+    .field-group input[type="file"] {
       padding: 0.4rem 0.6rem;
       border: 1px solid var(--gray-light);
       border-radius: var(--radius);
       font-size: 1rem;
-      width: 170px;
       display: block;
     }
-    .field-group input[type="file"] {
-      padding: 0.4rem;
-      font-size: 1rem;
-      display: block;
-    }
+    .field-group input[type="date"] { width: 170px; }
 
     /* Buttons */
     .button-group { margin-bottom: 1.2rem; }
@@ -210,26 +206,25 @@
       <div id="emailPreview"></div>
     </div>
   </div>
-  <!-- MSAL.js for user authentication -->
-  <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
 
+  <!-- Dependencies & App Logic -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <!-- MSAL.js for authentication -->
+  <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
   <!-- Microsoft Graph client -->
   <script type="module">
     import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/lib/es/MicrosoftGraphClient.js";
-    // expose the Graph client factory globally
     window.GraphClient = Client.initWithMiddleware;
   </script>
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
   <script src="app.js"></script>
   <script>
-    document.querySelectorAll('.tablinks').forEach((btn) => {
+    // Tab switching logic
+    document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
-        document
-          .querySelectorAll('.tablinks')
-          .forEach((b) => b.classList.remove('active'));
-        document
-          .querySelectorAll('.tabcontent')
-          .forEach((tc) => tc.classList.remove('active'));
+        document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tabcontent').forEach(tc => tc.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
       });
