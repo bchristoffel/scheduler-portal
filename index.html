@@ -5,37 +5,37 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Schedule Mailer</title>
   <style>
-    /* Add this to your existing <style> block */
-
-.email-card {
-  border: 1px solid var(--gray-light);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1.5rem;    /* more space between cards */
-  background: #fff;
-}
-/* Center all table header text */
-#preview table th,
-#emailPreview table th {
-  text-align: center;
-}
-
     :root {
-      --mint:       #76C7B7;
-      --mint-dark:  #5fa695;
-      --gray-light: #F2F2F2;
-      --gray-dark:  #333333;
-      --white:      #FFFFFF;
-      --midnight-overlay: rgba(0, 0, 51, 0.4); /* semi-transparent midnight blue */
-      --radius:     10px;
-      --transition: 0.25s ease;
+      --mint:              #76C7B7;
+      --mint-dark:         #5fa695;
+      --gray-light:        #F2F2F2;
+      --gray-dark:         #333333;
+      --white:             #FFFFFF;
+      --midnight-overlay:  rgba(0, 0, 51, 0.4);
+      --radius:            10px;
+      --transition:        0.25s ease;
     }
 
+    /* Card outline & spacing */
+    .email-card {
+      border: 1px solid var(--gray-light);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      background: var(--white);
+    }
+
+    /* Center table headers in both tabs */
+    #preview table th,
+    #emailPreview table th {
+      text-align: center;
+    }
+
+    /* Full-page background + overlay */
     body {
       margin: 0;
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      /* background image + midnight-blue overlay */
       background:
         linear-gradient(var(--midnight-overlay), var(--midnight-overlay)),
         url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1920&q=80')
@@ -47,6 +47,7 @@
       padding: 2rem;
     }
 
+    /* Main container */
     .container {
       background: var(--white);
       border-radius: var(--radius);
@@ -60,9 +61,9 @@
     h1 {
       margin-top: 0;
       font-size: 2rem;
-      color: var(--gray-dark);
     }
 
+    /* Tabs */
     .tabs {
       display: flex;
       border-bottom: 2px solid var(--gray-light);
@@ -91,6 +92,7 @@
     .tabcontent { display: none; }
     .tabcontent.active { display: block; }
 
+    /* Stacked form rows */
     .field-group {
       margin-bottom: 1.2rem;
     }
@@ -113,6 +115,7 @@
       display: block;
     }
 
+    /* Button group */
     .button-group {
       margin-bottom: 1.2rem;
     }
@@ -137,6 +140,7 @@
       transform: translateY(-1px);
     }
 
+    /* Table preview */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -145,7 +149,7 @@
     th, td {
       border: 1px solid var(--gray-light);
       padding: 0.6rem 0.8rem;
-      text-align: left;
+      /* default left-align data cells */
     }
   </style>
 </head>
