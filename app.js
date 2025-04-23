@@ -22,14 +22,17 @@ generateBtn.addEventListener('click', onGeneratePreview);
 downloadBtn.addEventListener('click', onDownloadTemplate);
 sendBtn.addEventListener('click', onSendAll);
 
-// 1. Load the workbook and extract Schedule tab rows
-defunction onFileLoad(e) {
+/**
+ * 1. Load the workbook and dynamically detect header and date rows
+ */
+function onFileLoad(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = evt => {
     const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array', cellDates: true });
     workbookGlobal = wb;
+
     const sheetName = 'Schedule';
     if (!wb.SheetNames.includes(sheetName)) {
       alert('Schedule tab not found.');
@@ -38,15 +41,26 @@ defunction onFileLoad(e) {
     const ws = wb.Sheets[sheetName];
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-    // arr[1] = dates row; arr[2] = headers; arr[3...] = data rows
-    dateRow = (arr[1] || []).map(cell => {
-      const d = (cell instanceof Date) ? cell : new Date(cell);
+    // Find the header row index by locating key columns
+    const headerIndex = arr.findIndex(
+      row => Array.isArray(row) && row.includes('Team') && row.includes('Email') && row.includes('Employee')
+    );
+    if (headerIndex < 1) {
+      alert('Could not find header row with Team, Email, Employee.');
+      return;
+    }
+
+    // The date row is immediately above header row
+    dateRow = arr[headerIndex - 1].map(cell => {
+      const d = cell instanceof Date ? cell : new Date(cell);
       return !isNaN(d)
         ? d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, '')
         : cell.toString().trim();
     });
-    headerRow = arr[2] || [];
-    rawRows = arr.slice(3);
+
+    // Set headerRow and rawRows
+    headerRow = arr[headerIndex];
+    rawRows = arr.slice(headerIndex + 1);
 
     // Reset UI
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate Preview.</p>';
@@ -57,48 +71,54 @@ defunction onFileLoad(e) {
   reader.readAsArrayBuffer(file);
 }
 
-// 2. Generate preview only (no download)
-defunction onGeneratePreview() {
+/**
+ * 2. Generate a 7-column preview: Email, Employee, and 5-day range
+ */
+function onGeneratePreview() {
   const startVal = weekStartInput.value;
   if (!startVal) {
     alert('Please select a Week Start date.');
     return;
   }
-  const startDate = new Date(startVal);
+  // Parse without timezone shift
+  const [y, m, d] = startVal.split('-').map(Number);
+  const startDate = new Date(y, m - 1, d);
 
-  // Build 5 consecutive dates
-  const dates = [];
-  for (let i = 0; i < 5; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
-    dates.push(
-      d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, '')
-    );
+  // Build 5 consecutive date strings matching dateRow
+  const dates = Array.from({ length: 5 }, (_, i) => {
+    const dt = new Date(startDate);
+    dt.setDate(dt.getDate() + i);
+    return dt
+      .toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' })
+      .replace(/,/g, '');
+  });
+
+  // Find dynamic indices for Team, Email, Employee
+  const teamIdx = headerRow.indexOf('Team');
+  const emailIdx = headerRow.indexOf('Email');
+  const empIdx = headerRow.indexOf('Employee');
+  if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) {
+    alert('Missing Team/Email/Employee columns in header.');
+    return;
   }
 
-  // Dynamic indices based on headerRow
-  const teamIdx = headerRow.findIndex(h => h.toString().trim().toLowerCase() === 'team');
-  const emailIdx = headerRow.findIndex(h => h.toString().trim().toLowerCase() === 'email');
-  const empIdx = headerRow.findIndex(h => h.toString().trim().toLowerCase() === 'employee');
+  // Map dates to indices in dateRow
+  const dateIndices = dates.map(dt => dateRow.indexOf(dt)).filter(i => i >= 0);
 
-  // Determine date column indices in dateRow
-  const dateIndices = dates
-    .map(dt => dateRow.findIndex(cell => cell === dt))
-    .filter(idx => idx >= 0);
-
-  // Build selectedHeaders: Email, Employee, then the 5 date strings
+  // Build selected header labels
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...dates];
 
-  // Filter rawRows and construct scheduleData
+  // Filter and map rows
   scheduleData = rawRows
     .filter(r => {
-      const teamVal = r[teamIdx];
-      return teamVal && teamVal !== 'X';
+      const t = r[teamIdx];
+      return t && t !== 'X';
     })
     .map(r => {
-      const obj = {};
-      obj[headerRow[emailIdx]] = r[emailIdx];
-      obj[headerRow[empIdx]] = r[empIdx];
+      const obj = {
+        [headerRow[emailIdx]]: r[emailIdx],
+        [headerRow[empIdx]]: r[empIdx]
+      };
       dateIndices.forEach((ci, i) => {
         obj[dates[i]] = r[ci] || '';
       });
@@ -111,21 +131,27 @@ defunction onGeneratePreview() {
     previewContainer.textContent = 'No matching rows for the selected week.';
     return;
   }
+
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const tr = document.createElement('tr');
+  const headerTr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th'); th.textContent = h; tr.appendChild(th);
+    const th = document.createElement('th');
+    th.textContent = h;
+    headerTr.appendChild(th);
   });
-  thead.appendChild(tr);
+  thead.appendChild(headerTr);
   table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
   scheduleData.forEach(row => {
-    const rowEl = document.createElement('tr');
+    const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = row[h] || ''; rowEl.appendChild(td);
+      const td = document.createElement('td');
+      td.textContent = row[h] || '';
+      tr.appendChild(td);
     });
-    tbody.appendChild(rowEl);
+    tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   previewContainer.appendChild(table);
@@ -135,22 +161,23 @@ defunction onGeneratePreview() {
   sendBtn.disabled = true;
 }
 
-// 3. Download the updated Weekly Template sheet
-defunction onDownloadTemplate() {
+/**
+ * 3. Download the updated Weekly Template sheet on demand
+ */
+function onDownloadTemplate() {
   if (!workbookGlobal) return;
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
   workbookGlobal.Sheets['Weekly Template'] = ws;
   if (!workbookGlobal.SheetNames.includes('Weekly Template')) {
     workbookGlobal.SheetNames.push('Weekly Template');
   }
-  // Trigger download only when clicked
   XLSX.writeFile(workbookGlobal, 'WeeklyTemplate.xlsx');
-
-  // Enable Send All
   sendBtn.disabled = false;
 }
 
-// Stub: send all emails
-defunction onSendAll() {
+/**
+ * 4. Stub for sending all emails
+ */
+function onSendAll() {
   alert(`Would send ${scheduleData.length} emails for the selected week.`);
 }
