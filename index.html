@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Schedule Mailer</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2em; }
-    label { margin-right: 1em; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
-    th, td { border: 1px solid #333; padding: 4px 8px; text-align: left; }
-    th { background: #f0f0f0; }
     #controls { margin-bottom: 1em; }
-    #controls input, #controls button { margin-left: 0.5em; }
+    label { margin-right: 0.5em; }
+    button { margin-left: 0.5em; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #333; padding: 6px 10px; text-align: left; }
+    th { background: #f0f0f0; }
   </style>
 </head>
 <body>
@@ -22,16 +22,15 @@
     <input type="date" id="weekStart" />
     <label for="fileInput">Upload Schedule (.xlsx):</label>
     <input type="file" id="fileInput" accept=".xlsx" />
-    <button id="generateTemplate" disabled>Generate Preview</button>
-    <button id="downloadTemplate" disabled>Download Template</button>
-    <button id="sendAll" disabled>Send All</button>
+    <button id="generateTemplate" disabled>Generate WeeklyTemplate Preview</button>
+    <button id="copyAll" style="display:none;">Copy All</button>
   </div>
 
   <div id="preview"></div>
 
   <!-- SheetJS library for Excel parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  <!-- Your client logic -->
+  <!-- Main application script -->
   <script src="app.js"></script>
 </body>
 </html>
