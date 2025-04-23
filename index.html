@@ -16,22 +16,6 @@
       --transition:        0.25s ease;
     }
 
-    /* Header: title + logo */
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    .header-row h1 {
-      margin: 0;
-      font-size: 2rem;
-      color: var(--gray-dark);
-    }
-    .header-row .logo {
-      max-height: 40px;
-    }
-
     /* Card outline & spacing */
     .email-card {
       border: 1px solid var(--gray-light);
@@ -74,6 +58,22 @@
       box-sizing: border-box;
     }
 
+    /* Header: logo on left, title next to it */
+    .header-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .header-row .logo {
+      max-height: 40px;
+      margin-right: 1rem;
+    }
+    .header-row h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: var(--gray-dark);
+    }
+
     /* Tabs */
     .tabs {
       display: flex;
@@ -99,14 +99,11 @@
     .tabs button:hover {
       background: #e0e0e0;
     }
-
     .tabcontent { display: none; }
     .tabcontent.active { display: block; }
 
-    /* Stacked form rows */
-    .field-group {
-      margin-bottom: 1.2rem;
-    }
+    /* Form */
+    .field-group { margin-bottom: 1.2rem; }
     .field-group label {
       display: block;
       margin-bottom: 0.3rem;
@@ -126,10 +123,8 @@
       display: block;
     }
 
-    /* Button group */
-    .button-group {
-      margin-bottom: 1.2rem;
-    }
+    /* Buttons */
+    .button-group { margin-bottom: 1.2rem; }
     .button {
       background: var(--mint);
       border: none;
@@ -151,7 +146,7 @@
       transform: translateY(-1px);
     }
 
-    /* Table preview */
+    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -167,8 +162,8 @@
 <body>
   <div class="container">
     <div class="header-row">
-      <h1>Schedule Mailer</h1>
       <img src="./AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="AutonomyWorks Logo" class="logo" />
+      <h1>Schedule Mailer</h1>
     </div>
 
     <div class="tabs">
