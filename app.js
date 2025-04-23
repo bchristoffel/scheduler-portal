@@ -1,140 +1,147 @@
 // app.js
 
-// Globals
+// Globals for parsed workbook data
 let workbookGlobal = null;
-let rawHeaders = [];
+let headerRow = [];
+let dateRow = [];
 let rawRows = [];
 let scheduleData = [];
 let selectedHeaders = [];
 
 // DOM elements
-const fileInput         = document.getElementById('fileInput');
-const weekStartInput    = document.getElementById('weekStart');
-const weekEndInput      = document.getElementById('weekEnd');
-const generateBtn       = document.getElementById('generateTemplate');
-const sendBtn           = document.getElementById('sendAll');
-const previewContainer  = document.getElementById('preview');
+const fileInput = document.getElementById('fileInput');
+const weekStartInput = document.getElementById('weekStart');
+const generateBtn = document.getElementById('generateTemplate');
+const sendBtn = document.getElementById('sendAll');
+const previewContainer = document.getElementById('preview');
 
-// Event listeners
-fileInput.addEventListener('change', handleFile, false);
-generateBtn.addEventListener('click', generateTemplatePreview, false);
-sendBtn.addEventListener('click', sendAllEmails, false);
+// Wire up events
+fileInput.addEventListener('change', onFileLoad);
+generateBtn.addEventListener('click', onGenerateTemplate);
+sendBtn.addEventListener('click', onSendAll);
 
-// Step 1: Load workbook and raw data
-function handleFile(e) {
+// 1. Load the workbook and extract Schedule tab data
+function onFileLoad(e) {
   const file = e.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
-  reader.onload = function(evt) {
-    const data = new Uint8Array(evt.target.result);
-    const wb   = XLSX.read(data, { type: 'array' });
+  reader.onload = evt => {
+    const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
     workbookGlobal = wb;
-
     const sheetName = 'Schedule';
     if (!wb.SheetNames.includes(sheetName)) {
-      alert(`Sheet named '${sheetName}' not found.`);
+      alert("Schedule tab not found.");
       return;
     }
-    const ws     = wb.Sheets[sheetName];
-    const arr    = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    rawHeaders  = arr[0];
-    rawRows     = arr.slice(1);
+    const ws = wb.Sheets[sheetName];
+    const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    headerRow = arr[0];   // row 1: Team, Email, Employee labels
+    dateRow = arr[1];     // row 2: actual dates (e.g. 28-Apr-25)
+    rawRows = arr.slice(2);
 
-    // Enable generate after file is loaded
+    // Enable the Generate button
     generateBtn.disabled = false;
     sendBtn.disabled = true;
-    previewContainer.innerHTML = '<p>File loaded. Pick week range and click Generate Template.</p>';
+    previewContainer.innerHTML = '<p>File loaded. Choose Week Start and click Generate Template.</p>';
   };
   reader.readAsArrayBuffer(file);
 }
 
-// Step 2: Generate preview and update Weekly Template sheet
-function generateTemplatePreview() {
+// 2. Build 5-day slice, filter rows, preview, and build template
+function onGenerateTemplate() {
   const startVal = weekStartInput.value;
-  const endVal   = weekEndInput.value;
-  if (!startVal || !endVal) {
-    alert('Please pick both Week Start and Week End.');
+  if (!startVal) {
+    alert('Please select a Week Start date.');
     return;
   }
   const startDate = new Date(startVal);
-  const endDate   = new Date(endVal);
 
-  // Identify date columns within range
-  const dateIndices = rawHeaders
-    .map((h, i) => {
-      const d = new Date(h);
-      return (!isNaN(d) && d >= startDate && d <= endDate) ? i : -1;
-    })
-    .filter(i => i >= 0);
+  // Build the list of 5 date strings matching row2 format
+  const dates = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    const str = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, '');
+    dates.push(str);
+  }
 
-  // Always include E (4) & F (5)
-  const baseCols = [4,5];
-  selectedHeaders = baseCols.concat(dateIndices).map(i => rawHeaders[i]);
+  // Find column indices
+  const teamIdx = headerRow.findIndex(h => h === 'Team');
+  const emailIdx = headerRow.findIndex(h => h === 'Email');
+  const empIdx = headerRow.findIndex(h => h === 'Employee');
+  const dateIndices = dates.map(dt => dateRow.findIndex(h => h === dt)).filter(idx => idx >= 0);
 
-  // Filter rows: D (3) not empty or 'X'
+  // Selected headers for preview & sheet
+  selectedHeaders = ['Email', 'Employee', ...dates];
+
+  // Filter rows where Team (col D) is not empty and not 'X'
   scheduleData = rawRows
     .filter(r => {
-      const v = r[3];
-      return v !== '' && v !== 'X';
+      const team = r[teamIdx];
+      return team && team !== 'X';
     })
     .map(r => {
       const obj = {};
-      baseCols.concat(dateIndices).forEach(i => obj[rawHeaders[i]] = r[i]);
+      obj['Email'] = r[emailIdx];
+      obj['Employee'] = r[empIdx];
+      dateIndices.forEach((ci, i) => {
+        obj[dates[i]] = r[ci] || '';
+      });
       return obj;
     });
 
-  // Render preview
-  renderPreview(scheduleData);
+  // Preview the 7 columns: Email, Employee, and 5 dates
+  renderPreview();
 
-  // Update Weekly Template sheet in workbook and prompt download
-  updateWeeklyTemplateSheet();
+  // Update the Weekly Template tab in workbook and prompt download
+  updateTemplateSheet();
 
-  // Enable send button
   sendBtn.disabled = false;
 }
 
-// Render preview function
-function renderPreview(data) {
+// Render the preview table
+function renderPreview() {
   previewContainer.innerHTML = '';
-  if (data.length === 0) {
-    previewContainer.textContent = 'No matching data for the selected range.';
+  if (scheduleData.length === 0) {
+    previewContainer.textContent = 'No matching rows for the selected week.';
     return;
   }
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
+  const hr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th'); th.textContent = h; headerRow.appendChild(th);
+    const th = document.createElement('th');
+    th.textContent = h;
+    hr.appendChild(th);
   });
-  thead.appendChild(headerRow);
+  thead.appendChild(hr);
   table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  data.forEach(row => {
+  const tb = document.createElement('tbody');
+  scheduleData.forEach(row => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = row[h] || ''; tr.appendChild(td);
+      const td = document.createElement('td');
+      td.textContent = row[h] || '';
+      tr.appendChild(td);
     });
-    tbody.appendChild(tr);
+    tb.appendChild(tr);
   });
-  table.appendChild(tbody);
+  table.appendChild(tb);
   previewContainer.appendChild(table);
 }
 
-// Update 'Weekly Template' sheet and download workbook
-function updateWeeklyTemplateSheet() {
+// Create or update 'Weekly Template' sheet and trigger file download
+function updateTemplateSheet() {
   const sheetName = 'Weekly Template';
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
   workbookGlobal.Sheets[sheetName] = ws;
-  if (!workbookGlobal.SheetNames.includes(sheetName)) workbookGlobal.SheetNames.push(sheetName);
-  XLSX.writeFile(workbookGlobal, 'Updated_Schedule_with_Template.xlsx');
+  if (!workbookGlobal.SheetNames.includes(sheetName)) {
+    workbookGlobal.SheetNames.push(sheetName);
+  }
+  XLSX.writeFile(workbookGlobal, 'WeeklyTemplate.xlsx');
 }
 
-// Stub for sending emails
-defunction sendAllEmails() {
-  const start = weekStartInput.value;
-  const end   = weekEndInput.value;
-  console.log('Sending emails for', {start, end, rows: scheduleData.length});
-  alert(`Would send ${scheduleData.length} emails for ${start} → ${end}`);
+// Stub: send all emails (to be replaced with real email logic)
+function onSendAll() {
+  alert(`Would send ${scheduleData.length} emails for the selected week.`);
 }
