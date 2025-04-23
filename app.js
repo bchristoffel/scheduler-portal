@@ -79,5 +79,3 @@ document.getElementById('sendAll').addEventListener('click', () => {
 
   alert(`Would send ${scheduleData.length} emails for ${start} → ${end}`);
 });
-
-// (We’ll wire up sendAll next)
