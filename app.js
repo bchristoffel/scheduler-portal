@@ -18,7 +18,7 @@ function formatDateFull(d) {
   return `${mon} ${day} ${yyyy}`;
 }
 
-// Globals for workbook and schedule data
+// Globals
 let workbookGlobal = null;
 let dateRow = [];
 let headerRow = [];
@@ -26,28 +26,29 @@ let rawRows = [];
 let scheduleData = [];
 let selectedHeaders = [];
 
-// DOM elements
+// DOM references
 const fileInput = document.getElementById('fileInput');
 const weekStartInput = document.getElementById('weekStart');
 const generateBtn = document.getElementById('generateTemplate');
 const copyBtn = document.getElementById('copyAll');
 const previewContainer = document.getElementById('preview');
 
-// Initialize: hide copy button
+// Initially hide copy button
 copyBtn.style.display = 'none';
 
-// Event listeners
-fileInput.addEventListener('change', onFileLoad);
-generateBtn.addEventListener('click', onGeneratePreview);
-copyBtn.addEventListener('click', onCopyAll);
+document.addEventListener('DOMContentLoaded', () => {
+  fileInput.addEventListener('change', onFileLoad);
+  generateBtn.addEventListener('click', onGeneratePreview);
+  copyBtn.addEventListener('click', onCopyAll);
+});
 
-// 1. Load the workbook and detect header & date rows
-function onFileLoad(e) {
-  const file = e.target.files[0];
+// 1. Load workbook and extract data
+function onFileLoad(event) {
+  const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(evt) {
-    const data = new Uint8Array(evt.target.result);
+  reader.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
     const wb = XLSX.read(data, { type: 'array', cellDates: true });
     workbookGlobal = wb;
     const ws = wb.Sheets['Schedule'];
@@ -56,21 +57,17 @@ function onFileLoad(e) {
       return;
     }
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    const headerIndex = arr.findIndex(
-      row => row.includes('Team') && row.includes('Email') && row.includes('Employee')
-    );
-    if (headerIndex < 1) {
+    const hi = arr.findIndex(row => row.includes('Team') && row.includes('Email') && row.includes('Employee'));
+    if (hi < 1) {
       alert('Header row not detected.');
       return;
     }
-    // Build dateRow from row above headerIndex
-    dateRow = (arr[headerIndex - 1] || []).map(cell => {
+    dateRow = (arr[hi - 1] || []).map(cell => {
       const d = new Date(cell);
       return isNaN(d) ? String(cell).trim() : formatDateShort(d);
     });
-    headerRow = arr[headerIndex] || [];
-    rawRows = arr.slice(headerIndex + 1);
-    // Reset UI
+    headerRow = arr[hi];
+    rawRows = arr.slice(hi + 1);
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate WeeklyTemplate Preview.</p>';
     generateBtn.disabled = false;
     copyBtn.style.display = 'none';
@@ -87,7 +84,6 @@ function onGeneratePreview() {
   }
   const [y, m, d] = startVal.split('-').map(Number);
   const startDate = new Date(y, m - 1, d);
-  // Build date labels
   const labelsShort = [];
   const labelsFull = [];
   for (let i = 0; i < 5; i++) {
@@ -98,22 +94,18 @@ function onGeneratePreview() {
   }
   const startIdx = dateRow.indexOf(labelsShort[0]);
   if (startIdx < 0) {
-    alert(`Date ${labelsShort[0]} not found in schedule dates.`);
+    alert(`Date ${labelsShort[0]} not found in dates row.`);
     return;
   }
-  const dateIndices = labelsShort.map((_, i) => startIdx + i)
-    .filter(idx => idx >= 0 && idx < dateRow.length);
-  // Find key columns
+  const dateIndices = labelsShort.map((_, i) => startIdx + i).filter(idx => idx >= 0 && idx < dateRow.length);
   const teamIdx = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
   const empIdx = headerRow.indexOf('Employee');
   if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) {
-    alert('Missing key columns.');
+    alert('Missing Team/Email/Employee columns.');
     return;
   }
-  // Prepare headers for table
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
-  // Build scheduleData
   scheduleData = rawRows
     .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
     .map(r => {
@@ -121,12 +113,9 @@ function onGeneratePreview() {
         [headerRow[emailIdx]]: r[emailIdx],
         [headerRow[empIdx]]: r[empIdx]
       };
-      dateIndices.forEach((ci, j) => {
-        obj[labelsFull[j]] = r[ci] || '';
-      });
+      dateIndices.forEach((ci, j) => obj[labelsFull[j]] = r[ci] || '');
       return obj;
     });
-  // Render preview
   previewContainer.innerHTML = '';
   if (!scheduleData.length) {
     previewContainer.textContent = 'No matching rows for the selected week.';
@@ -136,9 +125,7 @@ function onGeneratePreview() {
   const thead = document.createElement('thead');
   const thr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    thr.appendChild(th);
+    const th = document.createElement('th'); th.textContent = h; thr.appendChild(th);
   });
   thead.appendChild(thr);
   table.appendChild(thead);
@@ -146,15 +133,12 @@ function onGeneratePreview() {
   scheduleData.forEach(r => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td');
-      td.textContent = r[h] || '';
-      tr.appendChild(td);
+      const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   previewContainer.appendChild(table);
-  // Show copyAll button
   copyBtn.style.display = 'inline-block';
 }
 
