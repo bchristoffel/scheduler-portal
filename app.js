@@ -1,23 +1,30 @@
 // app.js
 
+// Global variables for workbook and filtered schedule data
 let workbookGlobal = null;
 let scheduleData = [];
 let selectedHeaders = [];
 
-// File input and date selectors
+// DOM elements
 const fileInput = document.getElementById('fileInput');
 const weekStartInput = document.getElementById('weekStart');
 const weekEndInput   = document.getElementById('weekEnd');
-fileInput.addEventListener('change', handleFile, false);
+const sendBtn        = document.getElementById('sendAll');
 
-document.getElementById('sendAll').addEventListener('click', () => {
+// Event listeners
+fileInput.addEventListener('change', handleFile, false);
+sendBtn.addEventListener('click', () => {
   const start = weekStartInput.value;
   const end   = weekEndInput.value;
-  if (!start || !end) return alert('Please pick both Week Start and Week End.');
+  if (!start || !end) {
+    alert('Please pick both Week Start and Week End.');
+    return;
+  }
   console.log('=== SEND ALL CLICKED ===', { weekStart: start, weekEnd: end, rows: scheduleData });
   alert(`Would send ${scheduleData.length} emails for ${start} → ${end}`);
 });
 
+// Handle file upload and parse the Schedule sheet
 function handleFile(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -25,41 +32,40 @@ function handleFile(e) {
   const reader = new FileReader();
   reader.onload = function(evt) {
     const data = new Uint8Array(evt.target.result);
-    const wb = XLSX.read(data, { type: 'array' });
+    const wb   = XLSX.read(data, { type: 'array' });
     workbookGlobal = wb;
 
-    // Use the "Schedule" sheet explicitly
     const sheetName = 'Schedule';
     if (!wb.SheetNames.includes(sheetName)) {
-      return alert(`Sheet named '${sheetName}' not found.`);
+      alert(`Sheet named '${sheetName}' not found.`);
+      return;
     }
     const worksheet = wb.Sheets[sheetName];
 
-    // Read as array of arrays for header and rows
-    const arr = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+    // Convert sheet to header+rows array
+    const arr     = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
     const headers = arr[0];
-    const rows = arr.slice(1);
+    const rows    = arr.slice(1);
 
-    // Parse selected date range
-    const start = new Date(weekStartInput.value);
-    const end   = new Date(weekEndInput.value);
+    const startDate = new Date(weekStartInput.value);
+    const endDate   = new Date(weekEndInput.value);
 
-    // Determine date columns within range
+    // Identify date columns within range
     const dateIndices = headers
       .map((h, i) => {
         const d = new Date(h);
-        return (!isNaN(d) && d >= start && d <= end) ? i : -1;
+        return (!isNaN(d) && d >= startDate && d <= endDate) ? i : -1;
       })
       .filter(i => i >= 0);
 
     // Always include columns E (index 4) and F (index 5)
     const baseCols = [4, 5];
 
-    // Build selectedHeaders array for template sheet
+    // Save selected headers
     selectedHeaders = baseCols.concat(dateIndices).map(i => headers[i]);
 
-    // Filter rows: column D (index 3) not empty and not "X"
-    const filtered = rows
+    // Filter rows: Column D (index 3) not empty or 'X'
+    scheduleData = rows
       .filter(r => {
         const dVal = r[3];
         return dVal !== '' && dVal !== 'X';
@@ -72,64 +78,58 @@ function handleFile(e) {
         return obj;
       });
 
-    scheduleData = filtered;
-    renderPreview(filtered);
-    document.getElementById('sendAll').disabled = false;
+    // Render preview and enable send button
+    renderPreview(scheduleData);
+    sendBtn.disabled = false;
 
-    // Also update the "Weekly Template" tab and prompt download
-    generateWeeklyTemplate(wb, filtered, selectedHeaders);
+    // Update Weekly Template and prompt download
+    generateWeeklyTemplate(wb, scheduleData, selectedHeaders);
   };
   reader.readAsArrayBuffer(file);
 }
 
-// Render a preview table
+// Render the filtered schedule preview table
 function renderPreview(data) {
   const preview = document.getElementById('preview');
   preview.innerHTML = '';
-  if (!data.length) {
+  if (data.length === 0) {
     preview.textContent = 'No matching data found.';
     return;
   }
-  const table = document.createElement('table');
-  table.style.borderCollapse = 'collapse';
-  table.style.marginTop = '1em';
 
-  // Header
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
+
   selectedHeaders.forEach(key => {
     const th = document.createElement('th');
     th.textContent = key;
-    th.style.border = '1px solid #333';
-    th.style.padding = '4px 8px';
     headerRow.appendChild(th);
   });
-  table.appendChild(headerRow);
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
 
-  // Rows
+  const tbody = document.createElement('tbody');
   data.forEach(row => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(key => {
       const td = document.createElement('td');
       td.textContent = row[key] || '';
-      td.style.border = '1px solid #333';
-      td.style.padding = '4px 8px';
       tr.appendChild(td);
     });
-    table.appendChild(tr);
+    tbody.appendChild(tr);
   });
-  document.getElementById('preview').appendChild(table);
+  table.appendChild(tbody);
+  preview.appendChild(table);
 }
 
-// Generate or update the "Weekly Template" sheet and trigger download
+// Generate/update Weekly Template sheet and trigger download of updated workbook
 function generateWeeklyTemplate(wb, data, headers) {
   const sheetName = 'Weekly Template';
-  // Create worksheet from JSON
   const ws = XLSX.utils.json_to_sheet(data, { header: headers });
-  // Assign or replace
   wb.Sheets[sheetName] = ws;
   if (!wb.SheetNames.includes(sheetName)) {
     wb.SheetNames.push(sheetName);
   }
-  // Prompt user to save updated workbook
   XLSX.writeFile(wb, 'Updated_Schedule.xlsx');
 }
