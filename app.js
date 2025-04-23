@@ -3,7 +3,6 @@
 // Globals for parsed workbook data
 let workbookGlobal = null;
 let headerRow = [];
-let dateRow = [];
 let rawRows = [];
 let scheduleData = [];
 let selectedHeaders = [];
@@ -21,6 +20,30 @@ generateBtn.addEventListener('click', onGenerateTemplate);
 sendBtn.addEventListener('click', onSendAll);
 
 // 1. Load the workbook and extract Schedule tab data
+function onFileLoad(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+    workbookGlobal = wb;
+    const sheetName = 'Schedule';
+    if (!wb.SheetNames.includes(sheetName)) {
+      alert('Schedule tab not found.');
+      return;
+    }
+    const ws = wb.Sheets[sheetName];
+    const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    headerRow = arr[1];   // row 2: headers including Team, Email, Employee, dates
+    rawRows = arr.slice(2); // data starts on row 3
+
+    // Enable the Generate button
+    generateBtn.disabled = false;
+    sendBtn.disabled = true;
+    previewContainer.innerHTML = '<p>File loaded. Choose Week Start and click Generate Template.</p>';
+  };
+  reader.readAsArrayBuffer(file);
+}
 function onFileLoad(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -56,7 +79,7 @@ function onGenerateTemplate() {
   }
   const startDate = new Date(startVal);
 
-  // Build the list of 5 date strings matching row2 format
+  // Build the list of 5 date strings matching headerRow format
   const dates = [];
   for (let i = 0; i < 5; i++) {
     const d = new Date(startDate);
@@ -65,16 +88,20 @@ function onGenerateTemplate() {
     dates.push(str);
   }
 
-  // Find column indices
-  const teamIdx = headerRow.findIndex(h => h === 'Team');
-  const emailIdx = headerRow.findIndex(h => h === 'Email');
-  const empIdx = headerRow.findIndex(h => h === 'Employee');
-  const dateIndices = dates.map(dt => dateRow.findIndex(h => h === dt)).filter(idx => idx >= 0);
+  // Fixed column indices relative to headerRow
+  const teamIdx = 3;   // column D
+  const emailIdx = 4;  // column E
+  const empIdx = 5;    // column F
 
-  // Selected headers for preview & sheet
-  selectedHeaders = ['Email', 'Employee', ...dates];
+  // Identify date column indices in headerRow
+  const dateIndices = dates
+    .map(dt => headerRow.findIndex(h => h === dt))
+    .filter(idx => idx >= 0);
 
-  // Filter rows where Team (col D) is not empty and not 'X'
+  // Build selectedHeaders: Email, Employee, then the 5 dates
+  selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...dates];
+
+  // Filter and map rows
   scheduleData = rawRows
     .filter(r => {
       const team = r[teamIdx];
@@ -82,55 +109,19 @@ function onGenerateTemplate() {
     })
     .map(r => {
       const obj = {};
-      obj['Email'] = r[emailIdx];
-      obj['Employee'] = r[empIdx];
+      obj[headerRow[emailIdx]] = r[emailIdx];
+      obj[headerRow[empIdx]] = r[empIdx];
       dateIndices.forEach((ci, i) => {
         obj[dates[i]] = r[ci] || '';
       });
       return obj;
     });
 
-  // Preview the 7 columns: Email, Employee, and 5 dates
+  // Render preview and download template sheet
   renderPreview();
-
-  // Update the Weekly Template tab in workbook and prompt download
   updateTemplateSheet();
-
   sendBtn.disabled = false;
-}
-
-// Render the preview table
-function renderPreview() {
-  previewContainer.innerHTML = '';
-  if (scheduleData.length === 0) {
-    previewContainer.textContent = 'No matching rows for the selected week.';
-    return;
-  }
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const hr = document.createElement('tr');
-  selectedHeaders.forEach(h => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    hr.appendChild(th);
-  });
-  thead.appendChild(hr);
-  table.appendChild(thead);
-  const tb = document.createElement('tbody');
-  scheduleData.forEach(row => {
-    const tr = document.createElement('tr');
-    selectedHeaders.forEach(h => {
-      const td = document.createElement('td');
-      td.textContent = row[h] || '';
-      tr.appendChild(td);
-    });
-    tb.appendChild(tr);
-  });
-  table.appendChild(tb);
-  previewContainer.appendChild(table);
-}
-
-// Create or update 'Weekly Template' sheet and trigger file download
+} and trigger file download
 function updateTemplateSheet() {
   const sheetName = 'Weekly Template';
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
