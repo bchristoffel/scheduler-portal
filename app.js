@@ -3,18 +3,18 @@
 // Helper: format a Date as 'MMM DD YY' (e.g., 'Apr 28 25')
 function formatDateShort(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  const mon = months[d.getUTCMonth()];
-  const yy  = String(d.getUTCFullYear()).slice(-2);
+  const day = String(d.getDate()).padStart(2, '0');
+  const mon = months[d.getMonth()];
+  const yy  = String(d.getFullYear()).slice(-2);
   return `${mon} ${day} ${yy}`;
 }
 
 // Helper: format a Date as 'MMM DD YYYY' (e.g., 'Apr 28 2025')
 function formatDateFull(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  const mon = months[d.getUTCMonth()];
-  const yyyy = d.getUTCFullYear();
+  const day = String(d.getDate()).padStart(2, '0');
+  const mon = months[d.getMonth()];
+  const yyyy = d.getFullYear();
   return `${mon} ${day} ${yyyy}`;
 }
 
@@ -46,7 +46,7 @@ function onFileLoad(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = evt => {
-    const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array', cellDates: true });
+    const wb = XLSX.read(evt.target.result, { type: 'array' });
     workbookGlobal = wb;
     const ws = wb.Sheets['Schedule'];
     if (!ws) {
@@ -54,17 +54,18 @@ function onFileLoad(e) {
       return;
     }
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    // Identify header row by finding Team, Email, Employee
     const headerIndex = arr.findIndex(r => r.includes('Team') && r.includes('Email') && r.includes('Employee'));
     if (headerIndex < 1) {
       alert('Header row not detected.');
       return;
     }
-    // dateRow is row above headerIndex
+    // The row above header is dateRow
     dateRow = (arr[headerIndex - 1] || []).map(cell => {
-      const d = cell instanceof Date ? cell : new Date(cell);
+      const d = new Date(cell);
       return isNaN(d) ? String(cell).trim() : formatDateShort(d);
     });
-    headerRow = arr[headerIndex] || [];
+    headerRow = arr[headerIndex];
     rawRows   = arr.slice(headerIndex + 1);
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate Preview.</p>';
     generateBtn.disabled = false;
@@ -81,30 +82,25 @@ function onGeneratePreview() {
     alert('Please select a Week Start date.');
     return;
   }
-  const [y, m, d] = startVal.split('-').map(Number);
-  const startDate = new Date(Date.UTC(y, m - 1, d));
-
-  // Build 5-day sequences in short format
-  const labelsShort = Array.from({ length: 5 }, (_, i) => {
+  const [y,m,d] = startVal.split('-').map(Number);
+  const startDate = new Date(y, m - 1, d);
+  // Build 5-day sequences short and full
+  const labelsShort = [];
+  const labelsFull  = [];
+  for (let i = 0; i < 5; i++) {
     const dt = new Date(startDate);
-    dt.setUTCDate(dt.getUTCDate() + i);
-    return formatDateShort(dt);
-  });
+    dt.setDate(dt.getDate() + i);
+    labelsShort.push(formatDateShort(dt));
+    labelsFull.push(formatDateFull(dt));
+  }
   const startIdx = dateRow.indexOf(labelsShort[0]);
   if (startIdx < 0) {
-    alert(`Date ${labelsShort[0]} not found in schedule date row.`);
+    alert(`Date ${labelsShort[0]} not found in schedule dates.`);
     return;
   }
-  const dateIndices = [0,1,2,3,4].map(i => startIdx + i).filter(i => i < dateRow.length);
-
-  // Build full-year labels for headers
-  const labelsFull = dateIndices.map((_, i) => {
-    const dt = new Date(startDate);
-    dt.setUTCDate(dt.getUTCDate() + i);
-    return formatDateFull(dt);
-  });
-
-  // Find Team, Email, Employee columns in headerRow
+  const dateIndices = Array.from({length:5}, (_,i) => startIdx + i)
+    .filter(idx => idx >= 0 && idx < dateRow.length);
+  // Find key columns
   const teamIdx  = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
   const empIdx   = headerRow.indexOf('Employee');
@@ -112,63 +108,52 @@ function onGeneratePreview() {
     alert('Missing Team/Email/Employee columns.');
     return;
   }
-
-  // Set up selectedHeaders
+  // Prepare headers
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
-
-  // Filter and map rawRows to scheduleData
+  // Build data
   scheduleData = rawRows.filter(r => r[teamIdx] && r[teamIdx] !== 'X')
     .map(r => {
       const obj = {
         [headerRow[emailIdx]]: r[emailIdx],
         [headerRow[empIdx]]:   r[empIdx]
       };
-      dateIndices.forEach((ci, j) => { obj[labelsFull[j]] = r[ci] || ''; });
+      dateIndices.forEach((ci,j) => obj[labelsFull[j]] = r[ci] || '');
       return obj;
     });
-
-  // Render preview table
+  // Render preview
   previewContainer.innerHTML = '';
-  if (scheduleData.length === 0) {
+  if (!scheduleData.length) {
     previewContainer.textContent = 'No matching rows for the selected week.';
     return;
   }
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const thr   = document.createElement('tr');
+  const thr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    thr.appendChild(th);
+    const th = document.createElement('th'); th.textContent = h; thr.appendChild(th);
   });
   thead.appendChild(thr);
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
-  scheduleData.forEach(row => {
+  scheduleData.forEach(r => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td');
-      td.textContent = row[h] || '';
-      tr.appendChild(td);
+      const td = document.createElement('td'); td.textContent = r[h]||''; tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   previewContainer.appendChild(table);
-
-  // Enable Download Template button
   downloadBtn.disabled = false;
   sendBtn.disabled = true;
 }
 
-// 3. Download the updated Weekly Template sheet when clicked
+// 3. Download the updated Weekly Template sheet on demand
 function onDownloadTemplate() {
   if (!workbookGlobal) return;
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
   workbookGlobal.Sheets['Weekly Template'] = ws;
-  if (!workbookGlobal.SheetNames.includes('Weekly Template')) {
-    workbookGlobal.SheetNames.push('Weekly Template');
-  }
+  if (!workbookGlobal.SheetNames.includes('Weekly Template')) workbookGlobal.SheetNames.push('Weekly Template');
   XLSX.writeFile(workbookGlobal, 'WeeklyTemplate.xlsx');
   sendBtn.disabled = false;
 }
