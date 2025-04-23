@@ -11,19 +11,20 @@
       --gray-light: #F2F2F2;
       --gray-dark:  #333333;
       --white:      #FFFFFF;
-      --midnight:   rgba(0, 0, 128, 0.3);
+      /* Much more transparent midnight-blue overlay */
+      --midnight:   rgba(0, 0, 128, 0.1);
       --radius:     10px;
       --transition: 0.25s ease;
     }
 
-    /* Full-screen background + transparent midnight-blue overlay */
     body {
       margin: 0;
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       background:
         linear-gradient(var(--midnight), var(--midnight)),
-        url('https://source.unsplash.com/1920x1080/?office,team,meeting') no-repeat center/cover;
+        url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1920&q=80')
+        no-repeat center/cover;
       color: var(--gray-dark);
       display: flex;
       align-items: center;
@@ -31,11 +32,11 @@
       padding: 2rem;
     }
 
-    /* Wider container */
     .container {
       background: var(--white);
       border-radius: var(--radius);
-      max-width: 1300px;
+      /* Widened container */
+      max-width: 1400px;
       width: 100%;
       box-shadow: 0 6px 30px rgba(0,0,0,0.2);
       padding: 3rem;
@@ -47,7 +48,6 @@
       font-size: 2rem;
     }
 
-    /* Tabs */
     .tabs {
       display: flex;
       border-bottom: 2px solid var(--gray-light);
@@ -76,7 +76,6 @@
     .tabcontent { display: none; }
     .tabcontent.active { display: block; }
 
-    /* Stacked form rows */
     .field-group {
       margin-bottom: 1.2rem;
     }
@@ -90,7 +89,7 @@
       border: 1px solid var(--gray-light);
       border-radius: var(--radius);
       font-size: 1rem;
-      width: 170px; /* fixed shorter date box */
+      width: 170px;
       display: block;
     }
     .field-group input[type="file"] {
@@ -99,7 +98,6 @@
       display: block;
     }
 
-    /* Button group */
     .button-group {
       margin-bottom: 1.2rem;
     }
@@ -124,7 +122,6 @@
       transform: translateY(-1px);
     }
 
-    /* Table preview */
     table {
       width: 100%;
       border-collapse: collapse;
