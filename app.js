@@ -18,7 +18,7 @@ function formatDateFull(d) {
   return `${mon} ${day} ${yyyy}`;
 }
 
-// Globals
+// Globals for workbook and schedule data
 let workbookGlobal = null;
 let dateRow = [];
 let headerRow = [];
@@ -26,14 +26,7 @@ let rawRows = [];
 let scheduleData = [];
 let selectedHeaders = [];
 
-// DOM references
-const fileInput = document.getElementById('fileInput');
-const weekStartInput = document.getElementById('weekStart');
-const generateBtn = document.getElementById('generateTemplate');
-const copyBtn = document.getElementById('copyAll');
-const previewContainer = document.getElementById('preview');
-
-// DOM references (initialized after DOM is ready)
+// Main initialization after DOM loads
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('fileInput');
   const weekStartInput = document.getElementById('weekStart');
@@ -41,26 +34,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyBtn = document.getElementById('copyAll');
   const previewContainer = document.getElementById('preview');
 
-  // Hide copy button initially
+  // Initial UI state
+  generateBtn.disabled = true;
   if (copyBtn) copyBtn.style.display = 'none';
 
   // Wire event listeners
-  if (fileInput) fileInput.addEventListener('change', onFileLoad);
-  if (generateBtn) generateBtn.addEventListener('click', onGeneratePreview);
-  if (copyBtn) copyBtn.addEventListener('click', onCopyAll);
-});('DOMContentLoaded', () => {
-  fileInput.addEventListener('change', onFileLoad);
-  generateBtn.addEventListener('click', onGeneratePreview);
-  copyBtn.addEventListener('click', onCopyAll);
+  fileInput.addEventListener('change', () => onFileLoad(fileInput, generateBtn, copyBtn, previewContainer));
+  generateBtn.addEventListener('click', () => onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer));
+  copyBtn.addEventListener('click', () => onCopyAll(previewContainer));
 });
 
-// 1. Load workbook and extract data
-function onFileLoad(event) {
-  const file = event.target.files[0];
+// 1. Load the workbook and detect header & date rows
+def function onFileLoad(fileInput, generateBtn, copyBtn, previewContainer) {
+  const file = fileInput.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
-    const data = new Uint8Array(e.target.result);
+  reader.onload = event => {
+    const data = new Uint8Array(event.target.result);
     const wb = XLSX.read(data, { type: 'array', cellDates: true });
     workbookGlobal = wb;
     const ws = wb.Sheets['Schedule'];
@@ -78,17 +68,17 @@ function onFileLoad(event) {
       const d = new Date(cell);
       return isNaN(d) ? String(cell).trim() : formatDateShort(d);
     });
-    headerRow = arr[hi];
+    headerRow = arr[hi] || [];
     rawRows = arr.slice(hi + 1);
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate WeeklyTemplate Preview.</p>';
     generateBtn.disabled = false;
-    copyBtn.style.display = 'none';
+    if (copyBtn) copyBtn.style.display = 'none';
   };
   reader.readAsArrayBuffer(file);
 }
 
 // 2. Generate WeeklyTemplate preview
-function onGeneratePreview() {
+def function onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer) {
   const startVal = weekStartInput.value;
   if (!startVal) {
     alert('Please select a Week Start date.');
@@ -109,7 +99,9 @@ function onGeneratePreview() {
     alert(`Date ${labelsShort[0]} not found in dates row.`);
     return;
   }
-  const dateIndices = labelsShort.map((_, i) => startIdx + i).filter(idx => idx >= 0 && idx < dateRow.length);
+  const dateIndices = labelsShort
+    .map((_, i) => startIdx + i)
+    .filter(idx => idx >= 0 && idx < dateRow.length);
   const teamIdx = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
   const empIdx = headerRow.indexOf('Employee');
@@ -125,7 +117,9 @@ function onGeneratePreview() {
         [headerRow[emailIdx]]: r[emailIdx],
         [headerRow[empIdx]]: r[empIdx]
       };
-      dateIndices.forEach((ci, j) => obj[labelsFull[j]] = r[ci] || '');
+      dateIndices.forEach((ci, j) => {
+        obj[labelsFull[j]] = r[ci] || '';
+      });
       return obj;
     });
   previewContainer.innerHTML = '';
@@ -137,7 +131,9 @@ function onGeneratePreview() {
   const thead = document.createElement('thead');
   const thr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th'); th.textContent = h; thr.appendChild(th);
+    const th = document.createElement('th');
+    th.textContent = h;
+    thr.appendChild(th);
   });
   thead.appendChild(thr);
   table.appendChild(thead);
@@ -145,17 +141,19 @@ function onGeneratePreview() {
   scheduleData.forEach(r => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td);
+      const td = document.createElement('td');
+      td.textContent = r[h] || '';
+      tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   previewContainer.appendChild(table);
-  copyBtn.style.display = 'inline-block';
+  if (copyBtn) copyBtn.style.display = 'inline-block';
 }
 
 // 3. Copy table to clipboard
-function onCopyAll() {
+def function onCopyAll(previewContainer) {
   const tbl = previewContainer.querySelector('table');
   if (!tbl) return;
   const range = document.createRange();
