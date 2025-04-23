@@ -29,8 +29,7 @@ let selectedHeaders = [];
 // DOM elements
 const fileInput      = document.getElementById('fileInput');
 const weekStartInput = document.getElementById('weekStart');
-const generateBtn    = document.getElementById('generateTemplate');
-const downloadBtn    = document.getElementById('downloadTemplate');
+const generateBtn    = document.getElementById('generateTemplate');\const downloadBtn    = document.getElementById('downloadTemplate');
 const sendBtn        = document.getElementById('sendAll');
 const previewContainer = document.getElementById('preview');
 
@@ -46,7 +45,8 @@ function onFileLoad(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = evt => {
-    const wb = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
+    const data = new Uint8Array(evt.target.result);
+    const wb = XLSX.read(data, { type: 'array', cellDates: true });
     workbookGlobal = wb;
     const ws = wb.Sheets['Schedule'];
     if (!ws) {
@@ -54,18 +54,17 @@ function onFileLoad(e) {
       return;
     }
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    // Identify header row by finding Team, Email, Employee
     const headerIndex = arr.findIndex(r => r.includes('Team') && r.includes('Email') && r.includes('Employee'));
     if (headerIndex < 1) {
       alert('Header row not detected.');
       return;
     }
-    // The row above header is dateRow
+    // dateRow is row above header
     dateRow = (arr[headerIndex - 1] || []).map(cell => {
       const d = new Date(cell);
       return isNaN(d) ? String(cell).trim() : formatDateShort(d);
     });
-    headerRow = arr[headerIndex];
+    headerRow = arr[headerIndex] || [];
     rawRows   = arr.slice(headerIndex + 1);
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate Preview.</p>';
     generateBtn.disabled = false;
@@ -82,10 +81,9 @@ function onGeneratePreview() {
     alert('Please select a Week Start date.');
     return;
   }
-  const [y,m,d] = startVal.split('-').map(Number);
+  const [y, m, d] = startVal.split('-').map(Number);
   const startDate = new Date(y, m - 1, d);
-
-  // Build 5-day sequences short and full
+  // Build 5-day sequences
   const labelsShort = [];
   const labelsFull  = [];
   for (let i = 0; i < 5; i++) {
@@ -101,7 +99,6 @@ function onGeneratePreview() {
   }
   const dateIndices = Array.from({ length: 5 }, (_, i) => startIdx + i)
     .filter(idx => idx >= 0 && idx < dateRow.length);
-
   // Find key columns
   const teamIdx  = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
@@ -110,11 +107,9 @@ function onGeneratePreview() {
     alert('Missing Team/Email/Employee columns.');
     return;
   }
-
   // Prepare headers
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
-
-  // Build data rows
+  // Build scheduleData
   scheduleData = rawRows
     .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
     .map(r => {
@@ -122,15 +117,12 @@ function onGeneratePreview() {
         [headerRow[emailIdx]]: r[emailIdx],
         [headerRow[empIdx]]:   r[empIdx]
       };
-      dateIndices.forEach((ci, j) => {
-        obj[labelsFull[j]] = r[ci] || '';
-      });
+      dateIndices.forEach((ci, j) => { obj[labelsFull[j]] = r[ci] || ''; });
       return obj;
     });
-
-  // Render preview table
+  // Render preview
   previewContainer.innerHTML = '';
-  if (scheduleData.length === 0) {
+  if (!scheduleData.length) {
     previewContainer.textContent = 'No matching rows for the selected week.';
     return;
   }
@@ -145,9 +137,7 @@ function onGeneratePreview() {
   const tbody = document.createElement('tbody');
   scheduleData.forEach(r => {
     const tr = document.createElement('tr');
-    selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td);
-    });
+    selectedHeaders.forEach(h => { const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td); });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -158,7 +148,7 @@ function onGeneratePreview() {
   sendBtn.disabled = true;
 }
 
-// 3. Download the updated Weekly Template sheet on demand
+// 3. Download the updated Weekly Template sheet
 function onDownloadTemplate() {
   if (!workbookGlobal) return;
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
