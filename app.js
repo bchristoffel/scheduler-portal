@@ -3,10 +3,10 @@
 // Helper: format a Date (UTC) as 'DD-MMM-YY'
 function formatDateUTC(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = String(d.getUTCDate()).padStart(1, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   const mon = months[d.getUTCMonth()];
   const yy  = String(d.getUTCFullYear()).slice(-2);
-  return `${mon} ${day} ${yyyy}`;
+  return `${mon} ${day} ${yy}`;
 }
 
 // Globals for workbook and schedule data
@@ -59,43 +59,63 @@ function onFileLoad(e) {
 function onGeneratePreview() {
   const startVal = weekStartInput.value;
   if (!startVal) return alert('Please select a Week Start date.');
-  const [y,m,d] = startVal.split('-').map(Number);
-  const startDate = new Date(Date.UTC(y, m-1, d));
-  const dates = Array.from({ length: 5 }, (_, i) => {
-    const dt = new Date(startDate);
-    dt.setUTCDate(dt.getUTCDate() + i);
-    return formatDateUTC(dt);
+  // Parse input as local date
+  const [y, m, d] = startVal.split('-').map(Number);
+  const startDate = new Date(y, m - 1, d);
+
+  // Build the two-digit key to match dateRow entries
+  const inputKey = formatDateUTC(startDate); // 'Apr 28 25'
+  const startIdx = dateRow.findIndex(cell => cell === inputKey);
+  if (startIdx < 0) return alert(`Date ${inputKey} not found in header row.`);
+
+  // Pick five consecutive date column indices
+  const dateIndices = [startIdx, startIdx + 1, startIdx + 2, startIdx + 3, startIdx + 4]
+    .filter(i => i >= 0 && i < dateRow.length);
+
+  // Build full-year formatted dates for preview headers
+  const finalDates = dateIndices.map((_, i) => {
+    const dt = new Date(y, m - 1, d + i);
+    return formatDateFullUTC(dt); // 'Apr 28 2025'
   });
 
-  const teamIdx  = headerRow.indexOf('Team');
+  // Locate Team/Email/Employee
+  const teamIdx = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
-  const empIdx   = headerRow.indexOf('Employee');
-  if (teamIdx<0||emailIdx<0||empIdx<0) return alert('Missing Team/Email/Employee columns.');
+  const empIdx = headerRow.indexOf('Employee');
 
-  const dateIndices = dates.map(dt => dateRow.indexOf(dt)).filter(i => i>=0);
-  selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...dates];
-  scheduleData = rawRows.filter(r => r[teamIdx] && r[teamIdx] !== 'X')
+  // Build preview headers
+  selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...finalDates];
+
+  // Filter and map
+  scheduleData = rawRows
+    .filter(r => { const t = r[teamIdx]; return t && t !== 'X'; })
     .map(r => {
-      const obj = {[headerRow[emailIdx]]: r[emailIdx], [headerRow[empIdx]]: r[empIdx]};
-      dateIndices.forEach((ci,i) => obj[dates[i]] = r[ci] || '');
+      const obj = {};
+      obj[headerRow[emailIdx]] = r[emailIdx];
+      obj[headerRow[empIdx]] = r[empIdx];
+      dateIndices.forEach((colIdx, j) => { obj[finalDates[j]] = r[colIdx] || ''; });
       return obj;
     });
 
+  // Render preview
   previewContainer.innerHTML = '';
   if (!scheduleData.length) return previewContainer.textContent = 'No matching rows for the selected week.';
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const thr   = document.createElement('tr');
-  selectedHeaders.forEach(h => {const th=document.createElement('th'); th.textContent = h; thr.appendChild(th);});
+  const thr = document.createElement('tr');
+  selectedHeaders.forEach(h => { const th = document.createElement('th'); th.textContent = h; thr.appendChild(th); });
   thead.appendChild(thr); table.appendChild(thead);
   const tbody = document.createElement('tbody');
-  scheduleData.forEach(r=>{
-    const tr=document.createElement('tr');
-    selectedHeaders.forEach(h=>{const td=document.createElement('td'); td.textContent=r[h]||''; tr.appendChild(td);});
+  scheduleData.forEach(r => {
+    const tr = document.createElement('tr');
+    selectedHeaders.forEach(h => { const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td); });
     tbody.appendChild(tr);
   }); table.appendChild(tbody); previewContainer.appendChild(table);
 
-  downloadBtn.disabled = false; sendBtn.disabled = true;
+  // Enable Download
+  downloadBtn.disabled = false;
+  sendBtn.disabled = true;
+}
 }
 
 // 3. Download the updated Weekly Template sheet
