@@ -1,79 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Schedule Mailer</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    #tabs { margin-bottom: 1em; }
-    .tab-btn {
+    /* Basic tab styling */
+    .tabs { margin-bottom: 1em; }
+    .tabs button {
       padding: 0.5em 1em;
-      margin-right: 0.5em;
+      cursor: pointer;
       border: 1px solid #ccc;
       background: #f9f9f9;
-      cursor: pointer;
+      margin-right: -1px;
     }
-    .tab-btn.active {
-      background: #e9e9e9;
-      font-weight: bold;
+    .tabs button.active {
+      background: white;
+      border-bottom: 1px solid white;
     }
-    #controls { margin-bottom: 1em; }
-    label { margin-right: 0.5em; }
-    button { margin-left: 0.5em; }
+    .tabcontent {
+      border: 1px solid #ccc;
+      padding: 1em;
+      display: none;
+    }
+    .tabcontent.active { display: block; }
     table { border-collapse: collapse; width: 100%; margin-top: 1em; }
-    th, td { border: 1px solid #333; padding: 6px 10px; text-align: left; }
-    th { background: #f0f0f0; }
+    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
   </style>
 </head>
 <body>
   <h1>Schedule Mailer</h1>
-
-  <!-- Tab navigation -->
-  <div id="tabs">
-    <button class="tab-btn active" data-tab="weekly">Weekly Template</button>
-    <button class="tab-btn" data-tab="emails">Emails</button>
+  <div class="tabs">
+    <button class="tablinks active" data-tab="weekly">Weekly Template</button>
+    <button class="tablinks" data-tab="emails">Emails</button>
   </div>
 
-  <!-- Weekly Template tab -->
-  <div id="weekly" class="tab-content">
-    <div id="controls">
+  <!-- Weekly Template Tab -->
+  <div id="weekly" class="tabcontent active">
+    <div>
       <label for="weekStart">Week Start:</label>
       <input type="date" id="weekStart" />
+    </div>
+    <div style="margin-top:0.5em;">
       <label for="fileInput">Upload Schedule (.xlsx):</label>
       <input type="file" id="fileInput" accept=".xlsx" />
+    </div>
+    <div style="margin-top:1em;">
       <button id="generateTemplate" disabled>Generate Weekly Preview</button>
       <button id="copyAll" style="display:none;">Copy All</button>
     </div>
     <div id="preview"></div>
   </div>
 
-  <!-- Emails tab -->
-  <div id="emails" class="tab-content" style="display:none;">
-    <div id="email-controls">
+  <!-- Emails Tab -->
+  <div id="emails" class="tabcontent">
+    <div>
       <button id="generateEmails" disabled>Generate Email Drafts</button>
       <button id="sendAll" disabled>Send All</button>
     </div>
-    <div id="emailPreview"></div>
+    <div id="emailPreview" style="margin-top:1em;"></div>
   </div>
 
-  <!-- Tab switching script -->
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- Your app logic -->
+  <script src="app.js"></script>
+  <!-- Simple tab-switching script -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const tabs = document.querySelectorAll('.tab-btn');
-      tabs.forEach(btn => btn.addEventListener('click', () => {
-        const target = btn.dataset.tab;
-        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(target).style.display = 'block';
+    document.querySelectorAll('.tablinks').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Deactivate all tabs/buttons
+        document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tabcontent').forEach(tc => tc.classList.remove('active'));
+        // Activate the clicked one
         btn.classList.add('active');
-      }));
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
     });
   </script>
-
-  <!-- SheetJS library -->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  <!-- Main app script -->
-  <script src="app.js"></script>
 </body>
 </html>
