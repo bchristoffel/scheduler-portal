@@ -361,61 +361,81 @@ enableEmailDrafts();
 // ─────────────────────────────────────────────────────────────────────────────
 // 5) Generate Email Drafts Preview
 function onGenerateEmails() {
-  emailPreview.innerHTML = '';  
+  emailPreview.innerHTML = '';
   if (!scheduleData.length) {
     emailPreview.textContent = 'No schedule data to generate emails.';
     return;
   }
 
-  // Build a subject line from your selected headers (first & last date)
-  const firstDate = selectedHeaders[2]; // e.g. "Apr 28 2025"
-  const lastDate  = selectedHeaders[selectedHeaders.length - 1];
-  const subject   = `Your schedule for ${firstDate} – ${lastDate}`;
-
-  // For each row in scheduleData, render a card
+  const subject = 'Schedule';
+  // Loop each associate’s row
   scheduleData.forEach(row => {
-    const to = row[ selectedHeaders[0] ];      // Email
-    const name = row[ selectedHeaders[1] ];    // Employee
+    const to   = row[selectedHeaders[0]]; // Email
+    const name = row[selectedHeaders[1]]; // Employee
 
-    // Build a simple table of this user’s week
-    let tableHtml = '<table style="border-collapse:collapse;width:100%;">';
-    tableHtml += '<tr>';
-    // date headers
-    selectedHeaders.slice(2).forEach(dh => {
-      tableHtml += `<th style="border:1px solid #ddd;padding:4px;">${dh}</th>`;
+    // Build table: first two header rows (dates, weekdays), then data row
+    let tableHtml = `<table style="border-collapse:collapse;width:100%;margin:1em 0;">
+      <thead>
+        <tr><th style="border:1px solid #ddd;padding:6px;"></th>`;
+    // Date header row
+    selectedHeaders.slice(2).forEach(full => {
+      tableHtml += `<th style="border:1px solid #ddd;padding:6px;">${full}</th>`;
     });
-    tableHtml += '</tr><tr>';
-    selectedHeaders.slice(2).forEach(dh => {
-      tableHtml += `<td style="border:1px solid #ddd;padding:4px;">${row[dh]||''}</td>`;
+    tableHtml += `</tr><tr><th style="border:1px solid #ddd;padding:6px;"></th>`;
+    // Weekday header row
+    selectedHeaders.slice(2).forEach(full => {
+      const dayName = new Date(full).toLocaleDateString('en-US',{weekday:'long'});
+      tableHtml += `<th style="border:1px solid #ddd;padding:6px;">${dayName}</th>`;
     });
-    tableHtml += '</tr></table>';
+    tableHtml += `</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border:1px solid #ddd;padding:6px;font-weight:600;">${name}</td>`;
+    // Data row
+    selectedHeaders.slice(2).forEach(full => {
+      tableHtml += `<td style="border:1px solid #ddd;padding:6px;">${row[full]||''}</td>`;
+    });
+    tableHtml += `
+        </tr>
+      </tbody>
+    </table>`;
 
-    // Compose the HTML body
+    // Professional wrapper
     const bodyHtml = `
-      <p>Hi ${name},</p>
-      <p>Here’s your schedule for <strong>${firstDate} – ${lastDate}</strong>:</p>
-      ${tableHtml}
-      <p>Thanks!</p>
-    `;
+      <div style="font-family:Segoe UI,Arial,sans-serif; color:#333;">
+        <p style="font-size:1rem; margin:0 0 1em 0;">
+          Hi Team &ndash;
+        </p>
+        <p style="font-size:1rem; margin:0 0 1em 0;">
+          Please see your schedule for next week below. If you have any questions, let us know.
+        </p>
+        ${tableHtml}
+        <p style="font-size:1rem; margin:1em 0 0 0;">
+          Thank you!
+        </p>
+      </div>`;
 
-    // Render card
+    // Render a preview card
     const card = document.createElement('div');
     card.className = 'email-card';
     card.innerHTML = `
-      <h3>To: ${to}</h3>
-      <p><strong>Subject:</strong> ${subject}</p>
-      <pre>${bodyHtml.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+      <h3 style="margin:0 0 .5em 0; font-size:1.1rem;">
+        To: ${to}
+      </h3>
+      <p style="margin:0 0 .5em 0;">
+        <strong>Subject:</strong> ${subject}
+      </p>
+      <div>${bodyHtml}</div>
     `;
     emailPreview.appendChild(card);
   });
 
   // Enable Send All
   sendAllBtn.disabled = false;
-
-  // Switch to Emails tab automatically (optional)
+  // Switch to Emails tab
   document.querySelector('.tablinks[data-tab="emails"]').click();
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 6) Send All (stub)
