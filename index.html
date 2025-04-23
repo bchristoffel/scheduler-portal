@@ -11,20 +11,16 @@
       --gray-light: #F2F2F2;
       --gray-dark:  #333333;
       --white:      #FFFFFF;
-      /* Much more transparent midnight-blue overlay */
-      --midnight:   rgba(0, 0, 128, 0.1);
       --radius:     10px;
       --transition: 0.25s ease;
     }
 
+    /* Full-page dark midnight-blue gradient */
     body {
       margin: 0;
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background:
-        linear-gradient(var(--midnight), var(--midnight)),
-        url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1920&q=80')
-        no-repeat center/cover;
+      background: linear-gradient(135deg, #00051a 0%, #001f3f 100%);
       color: var(--gray-dark);
       display: flex;
       align-items: center;
@@ -32,13 +28,13 @@
       padding: 2rem;
     }
 
+    /* Main container */
     .container {
       background: var(--white);
       border-radius: var(--radius);
-      /* Widened container */
       max-width: 1400px;
       width: 100%;
-      box-shadow: 0 6px 30px rgba(0,0,0,0.2);
+      box-shadow: 0 6px 30px rgba(0,0,0,0.3);
       padding: 3rem;
       box-sizing: border-box;
     }
@@ -46,8 +42,10 @@
     h1 {
       margin-top: 0;
       font-size: 2rem;
+      color: var(--gray-dark);
     }
 
+    /* Tabs */
     .tabs {
       display: flex;
       border-bottom: 2px solid var(--gray-light);
@@ -76,6 +74,7 @@
     .tabcontent { display: none; }
     .tabcontent.active { display: block; }
 
+    /* Stacked form rows */
     .field-group {
       margin-bottom: 1.2rem;
     }
@@ -98,6 +97,7 @@
       display: block;
     }
 
+    /* Button group */
     .button-group {
       margin-bottom: 1.2rem;
     }
@@ -122,6 +122,7 @@
       transform: translateY(-1px);
     }
 
+    /* Table preview */
     table {
       width: 100%;
       border-collapse: collapse;
