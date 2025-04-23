@@ -12,12 +12,14 @@ let selectedHeaders = [];
 const fileInput = document.getElementById('fileInput');
 const weekStartInput = document.getElementById('weekStart');
 const generateBtn = document.getElementById('generateTemplate');
+const downloadBtn = document.getElementById('downloadTemplate');
 const sendBtn = document.getElementById('sendAll');
 const previewContainer = document.getElementById('preview');
 
 // Event listeners
 fileInput.addEventListener('change', onFileLoad);
-generateBtn.addEventListener('click', onGenerateTemplate);
+generateBtn.addEventListener('click', onGeneratePreview);
+downloadBtn.addEventListener('click', onDownloadTemplate);
 sendBtn.addEventListener('click', onSendAll);
 
 // 1. Load the workbook and extract Schedule tab rows
@@ -36,24 +38,22 @@ function onFileLoad(e) {
     const ws = wb.Sheets[sheetName];
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-    // Row indices based on your file layout:
-    // arr[1] = second row with dates (e.g., '28-Apr-25', '29-Apr-25', ...)
-    // arr[2] = third row with column headers: 'Schedule Order', ... 'Team', 'Email', 'Employee'
-    // arr[3...] = data rows
+    // arr[1] = dates row; arr[2] = headers; arr[3...] = data
     dateRow = arr[1] || [];
     headerRow = arr[2] || [];
     rawRows = arr.slice(3);
 
-    // Enable generate button
+    // Enable Preview button
     generateBtn.disabled = false;
+    downloadBtn.disabled = true;
     sendBtn.disabled = true;
-    previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate Template.</p>';
+    previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate Preview.</p>';
   };
   reader.readAsArrayBuffer(file);
 }
 
-// 2. Generate preview and Weekly Template
-function onGenerateTemplate() {
+// 2. Generate preview only (no download)
+function onGeneratePreview() {
   const startVal = weekStartInput.value;
   if (!startVal) {
     alert('Please select a Week Start date.');
@@ -66,7 +66,9 @@ function onGenerateTemplate() {
   for (let i = 0; i < 5; i++) {
     const d = new Date(startDate);
     d.setDate(d.getDate() + i);
-    const str = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, '');
+    const str = d
+      .toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' })
+      .replace(/,/g, '');
     dates.push(str);
   }
 
@@ -75,13 +77,13 @@ function onGenerateTemplate() {
   const emailIdx = 4;
   const empIdx = 5;
 
-  // Map dates to column indices in dateRow
+  // Identify date column indices in dateRow
   const dateIndices = dates.map(dt => dateRow.indexOf(dt)).filter(i => i >= 0);
 
-  // Build selectedHeaders: Email, Employee + the five date strings
+  // Build selectedHeaders: Email label, Employee label + date strings
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...dates];
 
-  // Filter rawRows by Team and map to scheduleData
+  // Filter and map rawRows
   scheduleData = rawRows
     .filter(r => {
       const teamVal = r[teamIdx];
@@ -97,14 +99,12 @@ function onGenerateTemplate() {
       return obj;
     });
 
-  // Render preview
+  // Render preview (7 columns)
   renderPreview();
 
-  // Create/Update Weekly Template sheet and prompt download
-  updateTemplateSheet();
-
-  // Enable send
-  sendBtn.disabled = false;
+  // Enable Download Template button
+  downloadBtn.disabled = false;
+  sendBtn.disabled = true;
 }
 
 // Render preview table
@@ -118,7 +118,9 @@ function renderPreview() {
   const thead = document.createElement('thead');
   const headerTr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th'); th.textContent = h; headerTr.appendChild(th);
+    const th = document.createElement('th');
+    th.textContent = h;
+    headerTr.appendChild(th);
   });
   thead.appendChild(headerTr);
   table.appendChild(thead);
@@ -127,7 +129,9 @@ function renderPreview() {
   scheduleData.forEach(row => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = row[h] || ''; tr.appendChild(td);
+      const td = document.createElement('td');
+      td.textContent = row[h] || '';
+      tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
@@ -135,8 +139,9 @@ function renderPreview() {
   previewContainer.appendChild(table);
 }
 
-// Update Weekly Template sheet and download workbook
-function updateTemplateSheet() {
+// 3. Download the updated Weekly Template sheet
+function onDownloadTemplate() {
+  if (!workbookGlobal) return;
   const sheetName = 'Weekly Template';
   const ws = XLSX.utils.json_to_sheet(scheduleData, { header: selectedHeaders });
   workbookGlobal.Sheets[sheetName] = ws;
@@ -144,6 +149,9 @@ function updateTemplateSheet() {
     workbookGlobal.SheetNames.push(sheetName);
   }
   XLSX.writeFile(workbookGlobal, 'WeeklyTemplate.xlsx');
+
+  // Enable Send button
+  sendBtn.disabled = false;
 }
 
 // Stub send all
