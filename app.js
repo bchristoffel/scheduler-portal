@@ -1,484 +1,235 @@
 // app.js
 
-/**
- * Schedule Mailer Web App
- * Reads an Excel schedule, previews a weekly template,
- * copies the table, and previews email drafts.
- */
-
-// -----------------------------
-// Helper Functions
-// -----------------------------
-
-/**
- * Format a Date object as "MMM DD yy" (e.g. "Apr 28 25").
- */
-function formatDateShort(date) {
+// — Helpers —
+// Format date helpers (as defined earlier)
+function formatDateShort(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const d = date.getUTCDate();
-  const m = date.getUTCMonth();
-  const y = date.getUTCFullYear();
-  const day = String(d).padStart(2, '0');
-  const mon = months[m];
-  const yy = String(y).slice(-2);
+  const day  = String(d.getUTCDate()).padStart(2,'0');
+  const mon  = months[d.getUTCMonth()];
+  const yy   = String(d.getUTCFullYear()).slice(-2);
   return `${mon} ${day} ${yy}`;
 }
-
-/**
- * Format a Date object as "MMM DD yyyy" (e.g. "Apr 28 2025").
- */
-function formatDateFull(date) {
+function formatDateFull(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const d = date.getUTCDate();
-  const m = date.getUTCMonth();
-  const yyyy = date.getUTCFullYear();
-  const day = String(d).padStart(2, '0');
-  const mon = months[m];
+  const day  = String(d.getUTCDate()).padStart(2,'0');
+  const mon  = months[d.getUTCMonth()];
+  const yyyy = d.getUTCFullYear();
   return `${mon} ${day} ${yyyy}`;
 }
 
-// -----------------------------
-// Globals
-// -----------------------------
+// — Globals —
+let workbookGlobal;
+let dateRow      = [];
+let headerRow    = [];
+let rawRows      = [];
+let scheduleData = [];
+let selectedHeaders = [];
 
-let workbookGlobal = null;     // holds the loaded workbook
-let dateRow        = [];       // array of date labels (short)
-let headerRow      = [];       // array of header names
-let rawRows        = [];       // array of data rows from Excel
-let scheduleData   = [];       // mapped schedule entries for preview
-let selectedHeaders= [];       // column labels to display
+// Pagination globals
+let emailPage = 1;
+const emailsPerPage = 10;
 
-// -----------------------------
-// DOM Ready Initialization
-// -----------------------------
-
+// Entry point
 document.addEventListener('DOMContentLoaded', () => {
-  // Element references
-  const fileInput        = document.getElementById('fileInput');
-  const weekStartInput   = document.getElementById('weekStart');
-  const generateBtn      = document.getElementById('generateTemplate');
-  const copyBtn          = document.getElementById('copyAll');
-  const previewContainer = document.getElementById('preview');
+  const fileInput       = document.getElementById('fileInput');
+  const weekStartInput  = document.getElementById('weekStart');
+  const generateBtn     = document.getElementById('generateTemplate');
+  const copyBtn         = document.getElementById('copyAll');
+  const generateEmails  = document.getElementById('generateEmails');
+  const sendAllBtn      = document.getElementById('sendAll');
+  const previewContainer= document.getElementById('preview');
+  const emailPreview    = document.getElementById('emailPreview');
 
-  const generateEmailsBtn = document.getElementById('generateEmails');
-  const sendAllBtn       = document.getElementById('sendAll');
-  const emailPreview     = document.getElementById('emailPreview');
+  // Initial UI
+  generateBtn.disabled    = true;
+  if (copyBtn) copyBtn.style.display = 'none';
+  generateEmails.disabled = true;
+  sendAllBtn.disabled     = true;
 
-  // Initial UI state
-  generateBtn.disabled      = true;
-  if (copyBtn) copyBtn.style.display       = 'none';
-  if (generateEmailsBtn) generateEmailsBtn.disabled = true;
-  if (sendAllBtn) sendAllBtn.disabled     = true;
-
-  // Event listeners
-  fileInput.addEventListener('change', () =>
-    onFileLoad(fileInput, generateBtn, copyBtn, previewContainer)
-  );
-
-  generateBtn.addEventListener('click', () =>
-    onGeneratePreview(
-      weekStartInput,
-      generateBtn,
-      copyBtn,
-      previewContainer,
-      generateEmailsBtn
-    )
-  );
-
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () =>
-      onCopyAll(previewContainer)
-    );
-  }
-
-  if (generateEmailsBtn) {
-    generateEmailsBtn.addEventListener('click', () =>
-      onGenerateEmails(emailPreview, sendAllBtn)
-    );
-  }
-
-  if (sendAllBtn) {
-    sendAllBtn.addEventListener('click', onSendAll);
-  }
+  // Wire events
+  fileInput.addEventListener('change', () => onFileLoad(fileInput, generateBtn, copyBtn, previewContainer));
+  generateBtn.addEventListener('click', () => {
+    onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer);
+    generateEmails.disabled = scheduleData.length === 0;
+  });
+  if (copyBtn) copyBtn.addEventListener('click', () => onCopyAll(previewContainer));
+  generateEmails.addEventListener('click', () => {
+    emailPage = 1;
+    renderEmailPage(emailPreview, sendAllBtn);
+    // switch tab
+    document.querySelector('.tablinks[data-tab="emails"]').click();
+  });
+  sendAllBtn.addEventListener('click', onSendAll);
 });
 
-// -----------------------------
-// 1. Load the workbook and extract data
-// -----------------------------
-
-/**
- * Reads the selected Excel file, locates the "Schedule" sheet,
- * identifies header and date rows, and prepares for preview.
- */
+// 1) Load file
 function onFileLoad(fileInput, generateBtn, copyBtn, previewContainer) {
   const file = fileInput.files[0];
   if (!file) return;
-
   const reader = new FileReader();
-  reader.onload = (evt) => {
-    const data = new Uint8Array(evt.target.result);
-    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+  reader.onload = evt => {
+    const wb = XLSX.read(new Uint8Array(evt.target.result), { type:'array', cellDates:true });
     workbookGlobal = wb;
-
     const ws = wb.Sheets['Schedule'];
-    if (!ws) {
-      alert('Sheet named "Schedule" not found.');
-      return;
-    }
-
-    // Convert to array-of-arrays
-    const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-    // Find header row (must contain Team, Email, Employee)
-    const headerIndex = arr.findIndex(row =>
-      row.includes('Team') && row.includes('Email') && row.includes('Employee')
-    );
-
-    if (headerIndex < 1) {
-      alert('Could not detect header row with Team, Email, Employee.');
-      return;
-    }
-
-    // Build dateRow from the row above header
-    dateRow = (arr[headerIndex - 1] || []).map(cell => {
-      const d = new Date(cell);
-      return isNaN(d) ? String(cell).trim() : formatDateShort(d);
+    if (!ws) { alert('Schedule sheet not found'); return; }
+    const arr = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+    const hi = arr.findIndex(r => r.includes('Team') && r.includes('Email') && r.includes('Employee'));
+    if (hi < 1) { alert('Header row not detected'); return; }
+    dateRow = (arr[hi-1]||[]).map(c=>{
+      const d=new Date(c); return isNaN(d)?String(c).trim():formatDateShort(new Date(d.toUTCString()));
     });
-
-    // Set headerRow and rawRows for data
-    headerRow = arr[headerIndex] || [];
-    rawRows   = arr.slice(headerIndex + 1);
-
-    // Reset preview UI
-    previewContainer.innerHTML =
-      '<p>File loaded. Select Week Start and click Generate Weekly Preview.</p>';
-
-    // Enable preview button, hide copy
+    headerRow = arr[hi]||[];
+    rawRows   = arr.slice(hi+1);
+    previewContainer.innerHTML = '<p>Select Week Start and click Generate Weekly Preview.</p>';
     generateBtn.disabled = false;
-    if (copyBtn) copyBtn.style.display = 'none';
+    if (copyBtn) copyBtn.style.display='none';
   };
-
   reader.readAsArrayBuffer(file);
 }
 
-// -----------------------------
-// 2. Generate Weekly Template Preview
-// -----------------------------
-
-/**
- * Based on the selected week start, builds a 7-column table:
- * Email, Employee, and the five-day date range.
- */
-function onGeneratePreview(
-  weekStartInput,
-  generateBtn,
-  copyBtn,
-  previewContainer,
-  generateEmailsBtn
-) {
-  const startVal = weekStartInput.value;
-  if (!startVal) {
-    alert('Please pick a Week Start date.');
-    return;
-  }
-
-  // Parse local date
-  const [year, month, day] = startVal.split('-').map(Number);
-  const startDate = new Date(year, month - 1, day);
-
-  // Build arrays for five consecutive days
-  const labelsShort = [];
-  const labelsFull  = [];
-  for (let i = 0; i < 5; i++) {
-    const dt = new Date(startDate);
-    dt.setDate(dt.getDate() + i);
+// 2) Generate weekly preview
+function onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer) {
+  const val = weekStartInput.value;
+  if (!val) { alert('Pick a Week Start'); return; }
+  const [y,m,d] = val.split('-').map(Number);
+  const startDate = new Date(Date.UTC(y,m-1,d));
+  const labelsShort=[], labelsFull=[];
+  for(let i=0;i<5;i++){
+    const dt=new Date(startDate); dt.setUTCDate(dt.getUTCDate()+i);
     labelsShort.push(formatDateShort(dt));
     labelsFull.push(formatDateFull(dt));
   }
-
-  // Locate start index in dateRow
   const startIdx = dateRow.indexOf(labelsShort[0]);
-  if (startIdx < 0) {
-    alert(`Date ${labelsShort[0]} not found in schedule.`);
-    return;
-  }
-
-  // Five consecutive column indices
-  const dateIndices = labelsShort
-    .map((_, i) => startIdx + i)
-    .filter(idx => idx >= 0 && idx < dateRow.length);
-
-  // Identify key column indices
-  const teamIdx  = headerRow.indexOf('Team');
-  const emailIdx = headerRow.indexOf('Email');
-  const empIdx   = headerRow.indexOf('Employee');
-  if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) {
-    alert('Missing Team / Email / Employee columns.');
-    return;
-  }
-
-  // Build selectedHeaders for table
-  selectedHeaders = [
-    headerRow[emailIdx],
-    headerRow[empIdx],
-    ...labelsFull
-  ];
-
-  // Map rawRows into scheduleData
-  scheduleData = rawRows
-    .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
-    .map(r => {
-      const obj = {};
-      obj[ headerRow[emailIdx] ] = r[emailIdx] || '';
-      obj[ headerRow[empIdx]   ] = r[empIdx]   || '';
-      dateIndices.forEach((ci, j) => {
-        obj[ labelsFull[j] ] = r[ci] || '';
-      });
-      return obj;
+  if (startIdx<0){ alert(`Date ${labelsShort[0]} not found`); return; }
+  const dateIndices = Array.from({length:5},(_,i)=>startIdx+i).filter(i=>i>=0&&i<dateRow.length);
+  const teamIdx  = headerRow.indexOf('Team'),
+        emailIdx = headerRow.indexOf('Email'),
+        empIdx   = headerRow.indexOf('Employee');
+  if (teamIdx<0||emailIdx<0||empIdx<0){ alert('Missing Team/Email/Employee'); return; }
+  selectedHeaders = [ headerRow[emailIdx], headerRow[empIdx], ...labelsFull ];
+  scheduleData = rawRows.filter(r=>r[teamIdx]&&r[teamIdx]!=='X')
+    .map(r=>{
+      const o={};
+      o[ headerRow[emailIdx] ] = r[emailIdx]||'';
+      o[ headerRow[empIdx]   ] = r[empIdx]  ||'';
+      dateIndices.forEach((ci,j)=> o[ labelsFull[j] ] = r[ci]||'' );
+      return o;
     });
-
-  // Render preview table
+  // render preview
   previewContainer.innerHTML = '';
   if (!scheduleData.length) {
-    previewContainer.textContent = 'No matching rows for selected week.';
+    previewContainer.textContent = 'No matching rows.';
     return;
   }
-
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const thr   = document.createElement('tr');
-  selectedHeaders.forEach(h => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    thr.appendChild(th);
+  const tbl=document.createElement('table'),
+        thead=document.createElement('thead'),
+        thr=document.createElement('tr');
+  selectedHeaders.forEach(h=>{
+    const th=document.createElement('th'); th.textContent=h; thr.appendChild(th);
   });
-  thead.appendChild(thr);
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  scheduleData.forEach(row => {
-    const tr = document.createElement('tr');
-    selectedHeaders.forEach(h => {
-      const td = document.createElement('td');
-      td.textContent = row[h];
-      tr.appendChild(td);
+  thead.appendChild(thr); tbl.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  scheduleData.forEach(r=>{
+    const tr=document.createElement('tr');
+    selectedHeaders.forEach(h=>{
+      const td=document.createElement('td'); td.textContent=r[h]||''; tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
-  table.appendChild(tbody);
-
-  previewContainer.appendChild(table);
-
-  // Show Copy button and enable email draft
-  if (copyBtn) copyBtn.style.display = 'inline-block';
-  if (generateEmailsBtn) generateEmailsBtn.disabled = false;
+  tbl.appendChild(tbody);
+  previewContainer.appendChild(tbl);
+  if (copyBtn=document.getElementById('copyAll')) copyBtn.style.display='inline-block';
 }
 
-// -----------------------------
-// 3. Copy entire table to clipboard
-// -----------------------------
-
+// 3) Copy preview
 function onCopyAll(previewContainer) {
-  const table = previewContainer.querySelector('table');
-  if (!table) return;
+  const tbl = previewContainer.querySelector('table');
+  if (!tbl) return;
   const range = document.createRange();
-  range.selectNode(table);
+  range.selectNode(tbl);
   const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-  document.execCommand('copy');
-  sel.removeAllRanges();
-  alert('Table copied to clipboard!');
+  sel.removeAllRanges(); sel.addRange(range);
+  document.execCommand('copy'); sel.removeAllRanges();
+  alert('Table copied!');
 }
 
-// -----------------------------
-// 4. Generate Email Drafts Preview
-// -----------------------------
-
-/**
- * Renders a draft email for each schedule entry.
- */
-function onGenerateEmails() {
+// 4) Render one page of email drafts
+function renderEmailPage(emailPreview, sendAllBtn) {
   emailPreview.innerHTML = '';
-  if (!scheduleData.length) {
-    emailPreview.textContent = 'No schedule data to generate emails.';
-    return;
-  }
-
-  const subject = 'Schedule';
-
-  scheduleData.forEach(row => {
-    const email = row[selectedHeaders[0]];  // email column
-    const name  = row[selectedHeaders[1]];  // employee column
-
-    // Build table headers & data row
-    let tbl = `
-      <table style="border-collapse:collapse;width:100%;margin:1em 0;">
-        <thead>
-          <tr><th></th>`;
-    // Date row
-    selectedHeaders.slice(2).forEach(h => {
-      tbl += `<th style="border:1px solid #ddd;padding:6px;">${h}</th>`;
-    });
-    tbl += `</tr><tr><th></th>`;
-    // Weekday row
-    selectedHeaders.slice(2).forEach(h => {
-      const weekday = new Date(h).toLocaleDateString('en-US',{weekday:'long'});
-      tbl += `<th style="border:1px solid #ddd;padding:6px;">${weekday}</th>`;
-    });
-    tbl += `</tr></thead><tbody><tr>
-            <td style="border:1px solid #ddd;padding:6px;font-weight:600;">${name}</td>`;
-
-    // Data row with logo in empties
-    selectedHeaders.slice(2).forEach(h => {
-      const val = row[h];
-      if (val) {
-        tbl += `<td style="border:1px solid #ddd;padding:6px;">${val}</td>`;
-      } else {
-        tbl += `<td style="border:1px solid #ddd;padding:6px;text-align:center;">
-                  <img src="AW_DIMENSIONAL_BLACK_HOR_2024.png"
-                       alt="Logo"
-                       style="max-height:24px;opacity:0.3;" />
-                </td>`;
-      }
-    });
-    tbl += `</tr></tbody></table>`;
-
-    // Email body wrapper
-    const body = `
-      <div style="font-family:Segoe UI,Arial,sans-serif;color:#333;">
-        <p style="margin:0 0 1em;">Hi Team &ndash;</p>
-        <p style="margin:0 0 1em;">
-          Please see your schedule for next week below. If you have any questions, let us know.
-        </p>
+  const total = scheduleData.length,
+        pages = Math.ceil(total/emailsPerPage),
+        start = (emailPage-1)*emailsPerPage,
+        pageData = scheduleData.slice(start, start+emailsPerPage);
+  if (!pageData.length) {
+    emailPreview.textContent = 'No drafts on this page.';
+  } else {
+    pageData.forEach(row=>{
+      const email = row[selectedHeaders[0]],
+            name  = row[selectedHeaders[1]],
+            subject = 'Schedule';
+      // build table
+      let tbl = '<table style="border-collapse:collapse;width:100%;margin:1em 0;">'
+              + '<thead><tr><th></th>';
+      selectedHeaders.slice(2).forEach(h=>{ tbl+=`<th style="border:1px solid #ddd;padding:6px;">${h}</th>`; });
+      tbl+= '</tr><tr><th></th>';
+      selectedHeaders.slice(2).forEach(h=>{
+        const wd=new Date(h).toLocaleDateString('en-US',{weekday:'short'});
+        tbl+=`<th style="border:1px solid #ddd;padding:6px;">${wd}</th>`;
+      });
+      tbl+= '</tr></thead><tbody><tr>'
+          + `<td style="border:1px solid #ddd;padding:6px;font-weight:600;">${name}</td>`;
+      selectedHeaders.slice(2).forEach(h=>{
+        const v=row[h];
+        if(v) tbl+=`<td style="border:1px solid #ddd;padding:6px;">${v}</td>`;
+        else  tbl+=`<td style="border:1px solid #ddd;padding:6px;text-align:center;">
+                     <img src="AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="Logo"
+                          style="max-height:24px;opacity:0.3;" />
+                   </td>`;
+      });
+      tbl+= '</tr></tbody></table>';
+      // body wrapper
+      const body = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#333;">
+        <p>Hi Team &ndash;</p>
+        <p>Please see your schedule for next week below. If you have any questions, let us know.</p>
         ${tbl}
-        <p style="margin:1em 0 0 0;">Thank you!</p>
+        <p>Thank you!</p>
       </div>`;
-
-    // Render card
-    const card = document.createElement('div');
-    card.className = 'email-card';
-    card.innerHTML = `
-      <h3 style="margin:0 0 .5em;">
-        To: ${name}; ${email}
-      </h3>
-      <p style="margin:0 0 1em;"><strong>Subject:</strong> ${subject}</p>
-      ${body}
-    `;
-    emailPreview.appendChild(card);
-  });
-
-  // Enable Send All
-  sendAllBtn.disabled = false;
-  // Switch to Emails tab
-  document.querySelector('.tablinks[data-tab="emails"]').click();
-}
-
-function onSendAll() {
-  alert(`(Stub) Would send ${scheduleData.length} emails now.`);
-}
-// ─────────────────────────────────────────────────────────────────────────────
-// 4) Wiring up the Emails tab buttons (call this in your DOMContentLoaded block)
-const generateEmailsBtn = document.getElementById('generateEmails');
-const sendAllBtn        = document.getElementById('sendAll');
-const emailPreview      = document.getElementById('emailPreview');
-
-generateEmailsBtn.addEventListener('click', onGenerateEmails);
-sendAllBtn.addEventListener('click', onSendAll);
-
-// Enable the “Generate Email Drafts” button once we have a weekly preview:
-function enableEmailDrafts() {
-  generateEmailsBtn.disabled = scheduleData.length === 0;
-}
-
-// Call this at the end of onGeneratePreview():
-enableEmailDrafts();
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 5) Generate Email Drafts Preview
-function onGenerateEmails() {
-  emailPreview.innerHTML = '';
-  if (!scheduleData.length) {
-    emailPreview.textContent = 'No schedule data to generate emails.';
-    return;
+      const card=document.createElement('div');
+      card.className='email-card';
+      card.innerHTML = `<h3>To: ${name}; ${email}</h3>
+                        <p><strong>Subject:</strong> ${subject}</p>${body}`;
+      emailPreview.appendChild(card);
+    });
   }
-
-  const subject = 'Schedule';
-  // Loop each associate’s row
-  scheduleData.forEach(row => {
-    const to   = row[selectedHeaders[0]]; // Email
-    const name = row[selectedHeaders[1]]; // Employee
-
-    // Build table: first two header rows (dates, weekdays), then data row
-    let tableHtml = `<table style="border-collapse:collapse;width:100%;margin:1em 0;">
-      <thead>
-        <tr><th style="border:1px solid #ddd;padding:6px;"></th>`;
-    // Date header row
-    selectedHeaders.slice(2).forEach(full => {
-      tableHtml += `<th style="border:1px solid #ddd;padding:6px;">${full}</th>`;
-    });
-    tableHtml += `</tr><tr><th style="border:1px solid #ddd;padding:6px;"></th>`;
-    // Weekday header row
-    selectedHeaders.slice(2).forEach(full => {
-      const dayName = new Date(full).toLocaleDateString('en-US',{weekday:'long'});
-      tableHtml += `<th style="border:1px solid #ddd;padding:6px;">${dayName}</th>`;
-    });
-    tableHtml += `</tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="border:1px solid #ddd;padding:6px;font-weight:600;">${name}</td>`;
-    // Data row
-    selectedHeaders.slice(2).forEach(full => {
-      tableHtml += `<td style="border:1px solid #ddd;padding:6px;">${row[full]||''}</td>`;
-    });
-    tableHtml += `
-        </tr>
-      </tbody>
-    </table>`;
-
-    // Professional wrapper
-    const bodyHtml = `
-      <div style="font-family:Segoe UI,Arial,sans-serif; color:#333;">
-        <p style="font-size:1rem; margin:0 0 1em 0;">
-          Hi Team &ndash;
-        </p>
-        <p style="font-size:1rem; margin:0 0 1em 0;">
-          Please see your schedule for next week below. If you have any questions, let us know.
-        </p>
-        ${tableHtml}
-        <p style="font-size:1rem; margin:1em 0 0 0;">
-          Thank you!
-        </p>
-      </div>`;
-
-    // Render a preview card
-    const card = document.createElement('div');
-    card.className = 'email-card';
-    card.innerHTML = `
-      <h3 style="margin:0 0 .5em 0; font-size:1.1rem;">
-        To: ${to}
-      </h3>
-      <p style="margin:0 0 .5em 0;">
-        <strong>Subject:</strong> ${subject}
-      </p>
-      <div>${bodyHtml}</div>
-    `;
-    emailPreview.appendChild(card);
-  });
-
-  // Enable Send All
+  renderPaginationControls(pages);
   sendAllBtn.disabled = false;
-  // Switch to Emails tab
-  document.querySelector('.tablinks[data-tab="emails"]').click();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 6) Send All (stub)
+// 5) Pagination controls
+function renderPaginationControls(totalPages) {
+  const emailPreview = document.getElementById('emailPreview');
+  let pg = document.getElementById('emailPagination');
+  if (pg) pg.remove();
+  pg=document.createElement('div');
+  pg.id='emailPagination';
+  pg.style.textAlign='center';
+  const prev=document.createElement('button');
+  prev.className='button'; prev.textContent='← Prev';
+  prev.disabled = emailPage===1;
+  prev.onclick = ()=>{ emailPage--; renderEmailPage(emailPreview, document.getElementById('sendAll')); };
+  const info=document.createElement('span');
+  info.textContent=` Page ${emailPage} of ${totalPages} `;
+  info.style.margin='0 1em';
+  const next=document.createElement('button');
+  next.className='button'; next.textContent='Next →';
+  next.disabled = emailPage===totalPages;
+  next.onclick = ()=>{ emailPage++; renderEmailPage(emailPreview, document.getElementById('sendAll')); };
+  pg.append(prev, info, next);
+  emailPreview.parentNode.insertBefore(pg, emailPreview);
+}
+
+// 6) Stub send all
 function onSendAll() {
-  const count = scheduleData.length;
-  if (!confirm(`Send all ${count} drafts now?`)) return;
-  // TODO: integrate Microsoft Graph or backend send endpoint here
-  alert(`(Stub) Would send ${count} emails.`);
+  if (!confirm(`Send all ${scheduleData.length} emails now?`)) return;
+  alert(`(Stub) Would send ${scheduleData.length} emails.`);
 }
