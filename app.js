@@ -1,159 +1,192 @@
 // app.js
 
-// Helper: format a Date as 'MMM DD yy' (e.g., 'Apr 28 25')
+// — Helpers —
+// Format a Date as 'MMM DD yy' (e.g., 'Apr 28 25')
 function formatDateShort(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = String(d.getDate()).padStart(2, '0');
-  const mon = months[d.getMonth()];
-  const yy  = String(d.getFullYear()).slice(-2);
+  const day  = String(d.getUTCDate()).padStart(2, '0');
+  const mon  = months[d.getUTCMonth()];
+  const yy   = String(d.getUTCFullYear()).slice(-2);
   return `${mon} ${day} ${yy}`;
 }
-
-// Helper: format a Date as 'MMM DD yyyy' (e.g., 'Apr 28 2025')
+// Format a Date as 'MMM DD yyyy' (e.g., 'Apr 28 2025')
 function formatDateFull(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = String(d.getDate()).padStart(2, '0');
-  const mon = months[d.getMonth()];
-  const yyyy = d.getFullYear();
+  const day  = String(d.getUTCDate()).padStart(2, '0');
+  const mon  = months[d.getUTCMonth()];
+  const yyyy = d.getUTCFullYear();
   return `${mon} ${day} ${yyyy}`;
 }
 
-// Globals for workbook and schedule data
-let workbookGlobal = null;
-let dateRow = [];
-let headerRow = [];
-let rawRows = [];
+// — Globals —
+let workbookGlobal;
+let dateRow      = [];
+let headerRow    = [];
+let rawRows      = [];
 let scheduleData = [];
 let selectedHeaders = [];
 
-// Main initialization after DOM loads
+// — Entry Point — wait until the HTML is fully parsed
 document.addEventListener('DOMContentLoaded', () => {
-  const fileInput = document.getElementById('fileInput');
-  const weekStartInput = document.getElementById('weekStart');
-  const generateBtn = document.getElementById('generateTemplate');
-  const copyBtn = document.getElementById('copyAll');
-  const previewContainer = document.getElementById('preview');
+  const fileInput       = document.getElementById('fileInput');
+  const weekStartInput  = document.getElementById('weekStart');
+  const generateBtn     = document.getElementById('generateTemplate');
+  const copyBtn         = document.getElementById('copyAll');
+  const previewContainer= document.getElementById('preview');
 
   // Initial UI state
   generateBtn.disabled = true;
   if (copyBtn) copyBtn.style.display = 'none';
 
-  // Wire event listeners
-  fileInput.addEventListener('change', () => onFileLoad(fileInput, generateBtn, copyBtn, previewContainer));
-  generateBtn.addEventListener('click', () => onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer));
-  copyBtn.addEventListener('click', () => onCopyAll(previewContainer));
+  // Wire events
+  fileInput.addEventListener('change', () => {
+    onFileLoad(fileInput, generateBtn, copyBtn, previewContainer);
+  });
+  generateBtn.addEventListener('click', () => {
+    onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer);
+  });
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      onCopyAll(previewContainer);
+    });
+  }
 });
 
-// 1. Load the workbook and detect header & date rows
-def function onFileLoad(fileInput, generateBtn, copyBtn, previewContainer) {
+// — 1) Load file, detect header & date rows —
+function onFileLoad(fileInput, generateBtn, copyBtn, previewContainer) {
   const file = fileInput.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = event => {
-    const data = new Uint8Array(event.target.result);
+  reader.onload = evt => {
+    const data = new Uint8Array(evt.target.result);
     const wb = XLSX.read(data, { type: 'array', cellDates: true });
     workbookGlobal = wb;
+
     const ws = wb.Sheets['Schedule'];
     if (!ws) {
-      alert('Schedule tab not found.');
+      alert('Sheet named "Schedule" not found.');
       return;
     }
+    // Convert to array of rows
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    const hi = arr.findIndex(row => row.includes('Team') && row.includes('Email') && row.includes('Employee'));
+
+    // Find the header row (must contain Team, Email, Employee)
+    const hi = arr.findIndex(r => r.includes('Team') && r.includes('Email') && r.includes('Employee'));
     if (hi < 1) {
-      alert('Header row not detected.');
+      alert('Could not detect header row (looking for Team, Email, Employee).');
       return;
     }
+
+    // Build dateRow from the row immediately above the header
     dateRow = (arr[hi - 1] || []).map(cell => {
       const d = new Date(cell);
-      return isNaN(d) ? String(cell).trim() : formatDateShort(d);
+      return isNaN(d) ? String(cell).trim() : formatDateShort(new Date(d.toUTCString()));
     });
+
     headerRow = arr[hi] || [];
-    rawRows = arr.slice(hi + 1);
-    previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate WeeklyTemplate Preview.</p>';
+    rawRows   = arr.slice(hi + 1);
+
+    // Reset UI
+    previewContainer.innerHTML = '<p>File loaded. Select Week Start and click "Generate WeeklyTemplate Preview".</p>';
     generateBtn.disabled = false;
     if (copyBtn) copyBtn.style.display = 'none';
   };
   reader.readAsArrayBuffer(file);
 }
 
-// 2. Generate WeeklyTemplate preview
-def function onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer) {
+// — 2) Generate the 7-column preview —
+function onGeneratePreview(weekStartInput, generateBtn, copyBtn, previewContainer) {
   const startVal = weekStartInput.value;
   if (!startVal) {
-    alert('Please select a Week Start date.');
+    alert('Please pick a Week Start date.');
     return;
   }
+  // Build arrays of 5 days
   const [y, m, d] = startVal.split('-').map(Number);
-  const startDate = new Date(y, m - 1, d);
-  const labelsShort = [];
-  const labelsFull = [];
+  const startDate = new Date(Date.UTC(y, m - 1, d));
+  const labelsShort = [], labelsFull = [];
   for (let i = 0; i < 5; i++) {
     const dt = new Date(startDate);
-    dt.setDate(dt.getDate() + i);
+    dt.setUTCDate(dt.getUTCDate() + i);
     labelsShort.push(formatDateShort(dt));
     labelsFull.push(formatDateFull(dt));
   }
+
+  // Find starting index in dateRow
   const startIdx = dateRow.indexOf(labelsShort[0]);
   if (startIdx < 0) {
-    alert(`Date ${labelsShort[0]} not found in dates row.`);
+    alert(`Date ${labelsShort[0]} not found in the row above your headers.`);
     return;
   }
-  const dateIndices = labelsShort
-    .map((_, i) => startIdx + i)
+  // Map five consecutive columns
+  const dateIndices = Array.from({ length: 5 }, (_, i) => startIdx + i)
     .filter(idx => idx >= 0 && idx < dateRow.length);
-  const teamIdx = headerRow.indexOf('Team');
+
+  // Locate key columns in headerRow
+  const teamIdx  = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
-  const empIdx = headerRow.indexOf('Employee');
+  const empIdx   = headerRow.indexOf('Employee');
   if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) {
-    alert('Missing Team/Email/Employee columns.');
+    alert('Missing one of Team / Email / Employee columns.');
     return;
   }
-  selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
+
+  // Build selectedHeaders for table
+  selectedHeaders = [
+    headerRow[emailIdx],
+    headerRow[empIdx],
+    ...labelsFull
+  ];
+
+  // Filter + map your data rows
   scheduleData = rawRows
     .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
     .map(r => {
-      const obj = {
-        [headerRow[emailIdx]]: r[emailIdx],
-        [headerRow[empIdx]]: r[empIdx]
-      };
+      const obj = {};
+      obj[ headerRow[emailIdx] ] = r[emailIdx] || '';
+      obj[ headerRow[empIdx]   ] = r[empIdx]   || '';
       dateIndices.forEach((ci, j) => {
-        obj[labelsFull[j]] = r[ci] || '';
+        obj[ labelsFull[j] ] = r[ci] || '';
       });
       return obj;
     });
+
+  // Render the preview
   previewContainer.innerHTML = '';
   if (!scheduleData.length) {
-    previewContainer.textContent = 'No matching rows for the selected week.';
+    previewContainer.textContent = 'No matching rows for that week.';
     return;
   }
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const thr = document.createElement('tr');
+  const trh = document.createElement('tr');
   selectedHeaders.forEach(h => {
     const th = document.createElement('th');
     th.textContent = h;
-    thr.appendChild(th);
+    trh.appendChild(th);
   });
-  thead.appendChild(thr);
+  thead.appendChild(trh);
   table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
-  scheduleData.forEach(r => {
+  scheduleData.forEach(row => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
       const td = document.createElement('td');
-      td.textContent = r[h] || '';
+      td.textContent = row[h];
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   previewContainer.appendChild(table);
+
+  // Reveal the Copy All button
   if (copyBtn) copyBtn.style.display = 'inline-block';
 }
 
-// 3. Copy table to clipboard
-def function onCopyAll(previewContainer) {
+// — 3) Copy the table to clipboard —
+function onCopyAll(previewContainer) {
   const tbl = previewContainer.querySelector('table');
   if (!tbl) return;
   const range = document.createRange();
@@ -163,5 +196,5 @@ def function onCopyAll(previewContainer) {
   sel.addRange(range);
   document.execCommand('copy');
   sel.removeAllRanges();
-  alert('Preview table copied!');
+  alert('Preview table copied to clipboard!');
 }
