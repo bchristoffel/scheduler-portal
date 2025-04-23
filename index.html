@@ -210,7 +210,15 @@
       <div id="emailPreview"></div>
     </div>
   </div>
+  <!-- MSAL.js for user authentication -->
+  <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
 
+  <!-- Microsoft Graph client -->
+  <script type="module">
+    import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/lib/es/MicrosoftGraphClient.js";
+    // expose the Graph client factory globally
+    window.GraphClient = Client.initWithMiddleware;
+  </script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
   <script>
