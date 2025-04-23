@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Schedule Mailer</title>
 
-  <!-- favicon so browsers stop 404ing -->
+  <!-- Favicon (avoids 404) -->
   <link rel="icon" href="./AW_DIMENSIONAL_BLACK_HOR_2024.png" type="image/png" />
 
   <style>
     :root {
-      --mint:         #76C7B7;
-      --mint-dark:    #5fa695;
-      --white:        #FFFFFF;
-      --gray-bg:      #F7F9FA;    /* lighter gray for panels/cards */
-      --gray-lines:   #DDDDDD;    /* border color for grid lines */
-      --gray-dark:    #333333;
-      --midnight-overlay: rgba(0,0,51,0.4);
-      --radius:       10px;
-      --transition:   0.25s ease;
+      --mint:          #76C7B7;
+      --mint-dark:     #5fa695;
+      --white:         #FFFFFF;
+      --gray-bg:       #F7F9FA;   /* lighter gray */
+      --gray-lines:    #DDDDDD;   /* grid line color */
+      --gray-dark:     #333333;
+      --midnight:      rgba(0,0,51,0.4);
+      --radius:        10px;
+      --transition:    0.25s ease;
     }
 
     body {
@@ -26,7 +26,7 @@
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, Arial, sans-serif;
       background:
-        linear-gradient(var(--midnight-overlay),var(--midnight-overlay)),
+        linear-gradient(var(--midnight),var(--midnight)),
         url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1920&q=80')
         no-repeat center/cover;
       display: flex;
@@ -52,11 +52,11 @@
       align-items: flex-start;
       margin-bottom: 1rem;
     }
-    .header-row .logo {
+    .logo {
       max-height: 40px;
       margin-bottom: 0.5rem;
     }
-    .header-row h1 {
+    h1 {
       margin: 0;
       font-size: 2rem;
     }
@@ -89,9 +89,7 @@
 
     .field-group { margin-bottom: 1.2rem; }
     .field-group label {
-      display: block;
-      margin-bottom: 0.4rem;
-      font-weight: 500;
+      display: block; margin-bottom: 0.3rem; font-weight: 500;
     }
     .field-group input[type="date"],
     .field-group input[type="file"] {
@@ -101,7 +99,9 @@
       font-size: 1rem;
       display: block;
     }
-    .field-group input[type="date"] { width: 170px; }
+    .field-group input[type="date"] {
+      width: 170px;
+    }
 
     .button-group { margin-bottom: 1.2rem; }
     .button {
@@ -125,22 +125,20 @@
       transform: translateY(-1px);
     }
 
-    /* Panels: Weekly Template & Emails */
-    #preview,
-    #emailPreview {
+    /* Preview panels */
+    #preview, #emailPreview {
       background: var(--gray-bg);
       padding: 1rem;
       border-radius: var(--radius);
     }
 
-    /* Weekly Template table with grid lines */
+    /* Weekly template table with grid lines */
     #preview table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 1rem;
     }
-    #preview th,
-    #preview td {
+    #preview th, #preview td {
       border: 1px solid var(--gray-lines);
       padding: 0.6rem 0.8rem;
     }
@@ -148,7 +146,7 @@
       background: #fafafa;
     }
 
-    /* Email cards */
+    /* Email cards in their own light-gray containers */
     .email-card {
       background: var(--gray-bg);
       border: 1px solid var(--gray-lines);
@@ -159,7 +157,6 @@
     .email-card h3 {
       margin-top: 0;
     }
-
     /* Center headers in email draft tables */
     #emailPreview table th {
       text-align: center;
@@ -170,7 +167,7 @@
 <body>
   <div class="container">
     <div class="header-row">
-      <img src="./AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="AutonomyWorks Logo" class="logo" />
+      <img src="./AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="Logo" class="logo" />
       <h1>Schedule Mailer</h1>
     </div>
 
@@ -190,8 +187,12 @@
         <input type="file" id="fileInput" accept=".xlsx" />
       </div>
       <div class="button-group">
-        <button id="generateTemplate" class="button" disabled>Generate Weekly Preview</button>
-        <button id="copyAll" class="button" style="display:none;">Copy All</button>
+        <button id="generateTemplate" class="button" disabled>
+          Generate Weekly Preview
+        </button>
+        <button id="copyAll" class="button" style="display:none;">
+          Copy All
+        </button>
       </div>
       <div id="preview"></div>
     </div>
@@ -199,8 +200,12 @@
     <!-- Emails -->
     <div id="emails" class="tabcontent">
       <div class="button-group">
-        <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
-        <button id="sendAll" class="button" disabled>Send All</button>
+        <button id="generateEmails" class="button" disabled>
+          Generate Email Drafts
+        </button>
+        <button id="sendAll" class="button" disabled>
+          Send All
+        </button>
       </div>
       <div id="emailPreview"></div>
     </div>
@@ -209,6 +214,8 @@
   <!-- Dependencies -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+
+  <!-- Correct Graph import path -->
   <script type="module">
     import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/lib/graph-js-sdk-web.js";
     window.GraphClient = Client.initWithMiddleware;
@@ -217,6 +224,7 @@
   <!-- App logic -->
   <script src="app.js"></script>
   <script>
+    // Tab switching
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
