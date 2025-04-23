@@ -33,10 +33,22 @@ const generateBtn = document.getElementById('generateTemplate');
 const copyBtn = document.getElementById('copyAll');
 const previewContainer = document.getElementById('preview');
 
-// Initially hide copy button
-copyBtn.style.display = 'none';
-
+// DOM references (initialized after DOM is ready)
 document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.getElementById('fileInput');
+  const weekStartInput = document.getElementById('weekStart');
+  const generateBtn = document.getElementById('generateTemplate');
+  const copyBtn = document.getElementById('copyAll');
+  const previewContainer = document.getElementById('preview');
+
+  // Hide copy button initially
+  if (copyBtn) copyBtn.style.display = 'none';
+
+  // Wire event listeners
+  if (fileInput) fileInput.addEventListener('change', onFileLoad);
+  if (generateBtn) generateBtn.addEventListener('click', onGeneratePreview);
+  if (copyBtn) copyBtn.addEventListener('click', onCopyAll);
+});('DOMContentLoaded', () => {
   fileInput.addEventListener('change', onFileLoad);
   generateBtn.addEventListener('click', onGeneratePreview);
   copyBtn.addEventListener('click', onCopyAll);
