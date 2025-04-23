@@ -6,24 +6,24 @@
   <title>Schedule Mailer</title>
   <style>
     :root {
-      --mint: #76C7B7;
-      --mint-dark: #5fa695;
+      --mint:       #76C7B7;
+      --mint-dark:  #5fa695;
       --gray-light: #F2F2F2;
-      --gray-dark: #333333;
-      --white: #FFFFFF;
-      --navy-overlay: rgba(0, 0, 51, 0.75);
-      --radius: 10px;
+      --gray-dark:  #333333;
+      --white:      #FFFFFF;
+      --midnight:   rgba(0, 0, 128, 0.3);
+      --radius:     10px;
       --transition: 0.25s ease;
     }
 
-    /* Full-screen background + overlay */
+    /* Full-screen background + transparent midnight-blue overlay */
     body {
       margin: 0;
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       background:
-        linear-gradient(var(--navy-overlay), var(--navy-overlay)),
-        url('https://source.unsplash.com/1920x1080/?modern-office') no-repeat center/cover;
+        linear-gradient(var(--midnight), var(--midnight)),
+        url('https://source.unsplash.com/1920x1080/?office,team,meeting') no-repeat center/cover;
       color: var(--gray-dark);
       display: flex;
       align-items: center;
@@ -31,21 +31,20 @@
       padding: 2rem;
     }
 
-    /* Main container */
+    /* Wider container */
     .container {
       background: var(--white);
       border-radius: var(--radius);
-      max-width: 1100px;
+      max-width: 1300px;
       width: 100%;
       box-shadow: 0 6px 30px rgba(0,0,0,0.2);
-      padding: 2.5rem;
+      padding: 3rem;
       box-sizing: border-box;
     }
 
     h1 {
       margin-top: 0;
       font-size: 2rem;
-      color: var(--gray-dark);
     }
 
     /* Tabs */
@@ -77,32 +76,33 @@
     .tabcontent { display: none; }
     .tabcontent.active { display: block; }
 
-    /* Form row */
+    /* Stacked form rows */
     .field-group {
       margin-bottom: 1.2rem;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
     }
     .field-group label {
-      margin-right: 0.6rem;
+      display: block;
+      margin-bottom: 0.3rem;
       font-weight: 500;
-      min-width: 100px;
     }
     .field-group input[type="date"] {
       padding: 0.4rem 0.6rem;
       border: 1px solid var(--gray-light);
       border-radius: var(--radius);
       font-size: 1rem;
-      width: 170px; /* shorter date box */
-      margin-right: 1rem;
+      width: 170px; /* fixed shorter date box */
+      display: block;
     }
     .field-group input[type="file"] {
       padding: 0.4rem;
       font-size: 1rem;
+      display: block;
     }
 
-    /* Buttons */
+    /* Button group */
+    .button-group {
+      margin-bottom: 1.2rem;
+    }
     .button {
       background: var(--mint);
       border: none;
@@ -157,7 +157,7 @@
         <label for="fileInput">Upload Schedule:</label>
         <input type="file" id="fileInput" accept=".xlsx" />
       </div>
-      <div class="field-group">
+      <div class="button-group">
         <button id="generateTemplate" class="button" disabled>Generate Weekly Preview</button>
         <button id="copyAll" class="button" style="display:none;">Copy All</button>
       </div>
@@ -166,7 +166,7 @@
 
     <!-- Emails Tab -->
     <div id="emails" class="tabcontent">
-      <div class="field-group">
+      <div class="button-group">
         <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
         <button id="sendAll" class="button" disabled>Send All</button>
       </div>
