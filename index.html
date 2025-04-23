@@ -219,10 +219,9 @@
     <!-- Microsoft Graph client via Unpkg -->
   <!-- Microsoft Graph client via jsDelivr (correct path + CORS-enabled) -->
 <script type="module">
-  import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/lib/graph-js-sdk-web.js";
+  import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/dist/graph-js-sdk-web.js";
   window.GraphClient = Client.initWithMiddleware;
 </script>
-
 
   <!-- App logic -->
   <script src="app.js"></script>
