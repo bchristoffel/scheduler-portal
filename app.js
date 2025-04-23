@@ -340,3 +340,88 @@ function onGenerateEmails(emailPreview, sendAllBtn) {
 function onSendAll() {
   alert(`(Stub) Would send ${scheduleData.length} emails now.`);
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// 4) Wiring up the Emails tab buttons (call this in your DOMContentLoaded block)
+const generateEmailsBtn = document.getElementById('generateEmails');
+const sendAllBtn        = document.getElementById('sendAll');
+const emailPreview      = document.getElementById('emailPreview');
+
+generateEmailsBtn.addEventListener('click', onGenerateEmails);
+sendAllBtn.addEventListener('click', onSendAll);
+
+// Enable the “Generate Email Drafts” button once we have a weekly preview:
+function enableEmailDrafts() {
+  generateEmailsBtn.disabled = scheduleData.length === 0;
+}
+
+// Call this at the end of onGeneratePreview():
+enableEmailDrafts();
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5) Generate Email Drafts Preview
+function onGenerateEmails() {
+  emailPreview.innerHTML = '';  
+  if (!scheduleData.length) {
+    emailPreview.textContent = 'No schedule data to generate emails.';
+    return;
+  }
+
+  // Build a subject line from your selected headers (first & last date)
+  const firstDate = selectedHeaders[2]; // e.g. "Apr 28 2025"
+  const lastDate  = selectedHeaders[selectedHeaders.length - 1];
+  const subject   = `Your schedule for ${firstDate} – ${lastDate}`;
+
+  // For each row in scheduleData, render a card
+  scheduleData.forEach(row => {
+    const to = row[ selectedHeaders[0] ];      // Email
+    const name = row[ selectedHeaders[1] ];    // Employee
+
+    // Build a simple table of this user’s week
+    let tableHtml = '<table style="border-collapse:collapse;width:100%;">';
+    tableHtml += '<tr>';
+    // date headers
+    selectedHeaders.slice(2).forEach(dh => {
+      tableHtml += `<th style="border:1px solid #ddd;padding:4px;">${dh}</th>`;
+    });
+    tableHtml += '</tr><tr>';
+    selectedHeaders.slice(2).forEach(dh => {
+      tableHtml += `<td style="border:1px solid #ddd;padding:4px;">${row[dh]||''}</td>`;
+    });
+    tableHtml += '</tr></table>';
+
+    // Compose the HTML body
+    const bodyHtml = `
+      <p>Hi ${name},</p>
+      <p>Here’s your schedule for <strong>${firstDate} – ${lastDate}</strong>:</p>
+      ${tableHtml}
+      <p>Thanks!</p>
+    `;
+
+    // Render card
+    const card = document.createElement('div');
+    card.className = 'email-card';
+    card.innerHTML = `
+      <h3>To: ${to}</h3>
+      <p><strong>Subject:</strong> ${subject}</p>
+      <pre>${bodyHtml.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+    `;
+    emailPreview.appendChild(card);
+  });
+
+  // Enable Send All
+  sendAllBtn.disabled = false;
+
+  // Switch to Emails tab automatically (optional)
+  document.querySelector('.tablinks[data-tab="emails"]').click();
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6) Send All (stub)
+function onSendAll() {
+  const count = scheduleData.length;
+  if (!confirm(`Send all ${count} drafts now?`)) return;
+  // TODO: integrate Microsoft Graph or backend send endpoint here
+  alert(`(Stub) Would send ${count} emails.`);
+}
