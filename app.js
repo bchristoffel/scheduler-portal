@@ -64,5 +64,20 @@ function renderPreview(data) {
 
   preview.appendChild(table);
 }
+// When Send All is clicked, gather the data and just log it for now
+document.getElementById('sendAll').addEventListener('click', () => {
+  const start = document.getElementById('weekStart').value;
+  const end   = document.getElementById('weekEnd'  ).value;
+
+  if (!start || !end) {
+    return alert('Please pick both Week Start and Week End.');
+  }
+
+  console.log('=== SEND ALL CLICKED ===');
+  console.log('Week range:', start, '→', end);
+  console.log('Parsed rows:', scheduleData);
+
+  alert(`Would send ${scheduleData.length} emails for ${start} → ${end}`);
+});
 
 // (We’ll wire up sendAll next)
