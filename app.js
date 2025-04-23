@@ -1,6 +1,6 @@
 // app.js
 
-// Helper: format a Date as 'DD-MMM-YY'
+// Helper: format a Date as 'MMM DD, YY' (but output 'Mon DD YY')
 function formatDateShort(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const day = String(d.getUTCDate()).padStart(2, '0');
@@ -9,7 +9,7 @@ function formatDateShort(d) {
   return `${mon} ${day} ${yy}`;
 }
 
-// Helper: format a Date as 'DD-MMM-YYYY'
+// Helper: format a Date as 'MMM DD, YYYY' -> 'Mon DD YYYY'
 function formatDateFull(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const day = String(d.getUTCDate()).padStart(2, '0');
@@ -75,7 +75,7 @@ function onGeneratePreview() {
   const [y, m, d] = startVal.split('-').map(Number);
   // create local date without timezone shift
   const startDate = new Date(Date.UTC(y, m - 1, d));
-  // build short-format date labels
+  // build short-format date labels array
   const labelsShort = Array.from({ length: 5 }, (_, i) => {
     const dt = new Date(startDate);
     dt.setUTCDate(dt.getUTCDate() + i);
@@ -83,33 +83,33 @@ function onGeneratePreview() {
   });
   // find start index in dateRow
   const startIdx = dateRow.indexOf(labelsShort[0]);
-  if (startIdx < 0) return alert(`Date ${labelsShort[0]} not found in header row.`);
-  // collect indices
-  const dateIndices = [...Array(5).keys()].map(i => startIdx + i).filter(i => i < dateRow.length && i >= 0);
-  // build full-format labels for header
+  if (startIdx < 0) return alert(`Date ${labelsShort[0]} not found in schedule date row.`);
+  // collect five consecutive date column indices
+  const dateIndices = [0,1,2,3,4].map(i => startIdx + i).filter(i => i < dateRow.length && i >= 0);
+  // build full-format labels for header row
   const labelsFull = dateIndices.map((_, i) => {
     const dt = new Date(startDate);
     dt.setUTCDate(dt.getUTCDate() + i);
     return formatDateFull(dt);
   });
-  // find key columns
+  // find Team, Email, Employee columns
   const teamIdx  = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
   const empIdx   = headerRow.indexOf('Employee');
   if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) return alert('Missing Team/Email/Employee columns.');
   // set preview headers
   selectedHeaders = [headerRow[emailIdx], headerRow[empIdx], ...labelsFull];
-  // filter/map rows
-  scheduleData = rawRows.filter(r => {
-    const t = r[teamIdx]; return t && t !== 'X';
-  }).map(r => {
-    const obj = {
-      [headerRow[emailIdx]]: r[emailIdx],
-      [headerRow[empIdx]]:   r[empIdx]
-    };
-    dateIndices.forEach((ci, j) => obj[labelsFull[j]] = r[ci] || '');
-    return obj;
-  });
+  // filter and map rows
+  scheduleData = rawRows
+    .filter(r => r[teamIdx] && r[teamIdx] !== 'X')
+    .map(r => {
+      const obj = {
+        [headerRow[emailIdx]]: r[emailIdx],
+        [headerRow[empIdx]]:   r[empIdx]
+      };
+      dateIndices.forEach((ci, j) => { obj[labelsFull[j]] = r[ci] || ''; });
+      return obj;
+    });
   // render preview
   previewContainer.innerHTML = '';
   if (!scheduleData.length) return previewContainer.textContent = 'No matching rows for the selected week.';
@@ -141,6 +141,4 @@ function onDownloadTemplate() {
 }
 
 // 4. Stub send all emails
-function onSendAll() {
-  alert(`Would send ${scheduleData.length} emails for the selected week.`);
-}
+function onSendAll() { alert(`Would send ${scheduleData.length} emails for the selected week.`); }
