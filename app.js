@@ -298,44 +298,81 @@ function onCopyAll(previewContainer) {
 /**
  * Renders a draft email for each schedule entry.
  */
-function onGenerateEmails(emailPreview, sendAllBtn) {
+function onGenerateEmails() {
   emailPreview.innerHTML = '';
+  if (!scheduleData.length) {
+    emailPreview.textContent = 'No schedule data to generate emails.';
+    return;
+  }
 
-  scheduleData.forEach(entry => {
-    const card = document.createElement('div');
-    card.style.border   = '1px solid #ccc';
-    card.style.padding  = '10px';
-    card.style.margin   = '8px 0';
+  const subject = 'Schedule';
 
-    // Subject line
-    const subj = document.createElement('h3');
-    subj.textContent = `Subject: Your Schedule (${selectedHeaders[2]} – ${selectedHeaders.slice(-1)})`;
-    card.appendChild(subj);
+  scheduleData.forEach(row => {
+    const email = row[selectedHeaders[0]];  // email column
+    const name  = row[selectedHeaders[1]];  // employee column
 
-    // To:
-    const toLine = document.createElement('p');
-    toLine.textContent = `To: ${entry[selectedHeaders[0]]}`;
-    card.appendChild(toLine);
-
-    // Body:
-    const body = document.createElement('pre');
-    let text = `Hello ${entry[selectedHeaders[1]]},\n\nHere is your schedule for the week:\n`;
-    selectedHeaders.slice(2).forEach(day => {
-      text += `- ${day}: ${entry[day] || 'OFF'}\n`;
+    // Build table headers & data row
+    let tbl = `
+      <table style="border-collapse:collapse;width:100%;margin:1em 0;">
+        <thead>
+          <tr><th></th>`;
+    // Date row
+    selectedHeaders.slice(2).forEach(h => {
+      tbl += `<th style="border:1px solid #ddd;padding:6px;">${h}</th>`;
     });
-    text += '\nBest,\nYour Team';
-    body.textContent = text;
-    card.appendChild(body);
+    tbl += `</tr><tr><th></th>`;
+    // Weekday row
+    selectedHeaders.slice(2).forEach(h => {
+      const weekday = new Date(h).toLocaleDateString('en-US',{weekday:'long'});
+      tbl += `<th style="border:1px solid #ddd;padding:6px;">${weekday}</th>`;
+    });
+    tbl += `</tr></thead><tbody><tr>
+            <td style="border:1px solid #ddd;padding:6px;font-weight:600;">${name}</td>`;
 
+    // Data row with logo in empties
+    selectedHeaders.slice(2).forEach(h => {
+      const val = row[h];
+      if (val) {
+        tbl += `<td style="border:1px solid #ddd;padding:6px;">${val}</td>`;
+      } else {
+        tbl += `<td style="border:1px solid #ddd;padding:6px;text-align:center;">
+                  <img src="AW_DIMENSIONAL_BLACK_HOR_2024.png"
+                       alt="Logo"
+                       style="max-height:24px;opacity:0.3;" />
+                </td>`;
+      }
+    });
+    tbl += `</tr></tbody></table>`;
+
+    // Email body wrapper
+    const body = `
+      <div style="font-family:Segoe UI,Arial,sans-serif;color:#333;">
+        <p style="margin:0 0 1em;">Hi Team &ndash;</p>
+        <p style="margin:0 0 1em;">
+          Please see your schedule for next week below. If you have any questions, let us know.
+        </p>
+        ${tbl}
+        <p style="margin:1em 0 0 0;">Thank you!</p>
+      </div>`;
+
+    // Render card
+    const card = document.createElement('div');
+    card.className = 'email-card';
+    card.innerHTML = `
+      <h3 style="margin:0 0 .5em;">
+        To: ${name}; ${email}
+      </h3>
+      <p style="margin:0 0 1em;"><strong>Subject:</strong> ${subject}</p>
+      ${body}
+    `;
     emailPreview.appendChild(card);
   });
 
-  if (sendAllBtn) sendAllBtn.disabled = false;
+  // Enable Send All
+  sendAllBtn.disabled = false;
+  // Switch to Emails tab
+  document.querySelector('.tablinks[data-tab="emails"]').click();
 }
-
-// -----------------------------
-// 5. Send All Stub
-// -----------------------------
 
 function onSendAll() {
   alert(`(Stub) Would send ${scheduleData.length} emails now.`);
