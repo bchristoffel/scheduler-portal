@@ -58,15 +58,16 @@
       box-sizing: border-box;
     }
 
-    /* Header: logo on left, title next to it */
+    /* Header: logo above title, right-aligned */
     .header-row {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-end;
       margin-bottom: 1rem;
     }
     .header-row .logo {
       max-height: 40px;
-      margin-right: 1rem;
+      margin-bottom: 0.5rem;
     }
     .header-row h1 {
       margin: 0;
