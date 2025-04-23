@@ -27,11 +27,14 @@ let scheduleData = [];
 let selectedHeaders = [];
 
 // DOM elements
-const fileInput      = document.getElementById('fileInput');
+const fileInput = document.getElementById('fileInput');
 const weekStartInput = document.getElementById('weekStart');
-const generateBtn    = document.getElementById('generateTemplate');
-const copyBtn        = document.getElementById('copyAll');
+const generateBtn = document.getElementById('generateTemplate');
+const copyBtn = document.getElementById('copyAll');
 const previewContainer = document.getElementById('preview');
+
+// Initialize: hide copy button
+copyBtn.style.display = 'none';
 
 // Event listeners
 fileInput.addEventListener('change', onFileLoad);
@@ -43,7 +46,7 @@ function onFileLoad(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = evt => {
+  reader.onload = function(evt) {
     const data = new Uint8Array(evt.target.result);
     const wb = XLSX.read(data, { type: 'array', cellDates: true });
     workbookGlobal = wb;
@@ -53,7 +56,9 @@ function onFileLoad(e) {
       return;
     }
     const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    const headerIndex = arr.findIndex(r => r.includes('Team') && r.includes('Email') && r.includes('Employee'));
+    const headerIndex = arr.findIndex(
+      row => row.includes('Team') && row.includes('Email') && row.includes('Employee')
+    );
     if (headerIndex < 1) {
       alert('Header row not detected.');
       return;
@@ -64,7 +69,7 @@ function onFileLoad(e) {
       return isNaN(d) ? String(cell).trim() : formatDateShort(d);
     });
     headerRow = arr[headerIndex] || [];
-    rawRows   = arr.slice(headerIndex + 1);
+    rawRows = arr.slice(headerIndex + 1);
     // Reset UI
     previewContainer.innerHTML = '<p>File loaded. Select Week Start and click Generate WeeklyTemplate Preview.</p>';
     generateBtn.disabled = false;
@@ -84,7 +89,7 @@ function onGeneratePreview() {
   const startDate = new Date(y, m - 1, d);
   // Build date labels
   const labelsShort = [];
-  const labelsFull  = [];
+  const labelsFull = [];
   for (let i = 0; i < 5; i++) {
     const dt = new Date(startDate);
     dt.setDate(dt.getDate() + i);
@@ -93,15 +98,15 @@ function onGeneratePreview() {
   }
   const startIdx = dateRow.indexOf(labelsShort[0]);
   if (startIdx < 0) {
-    alert(`Date ${labelsShort[0]} not found.`);
+    alert(`Date ${labelsShort[0]} not found in schedule dates.`);
     return;
   }
-  const dateIndices = Array.from({ length: 5 }, (_, i) => startIdx + i)
+  const dateIndices = labelsShort.map((_, i) => startIdx + i)
     .filter(idx => idx >= 0 && idx < dateRow.length);
   // Find key columns
-  const teamIdx  = headerRow.indexOf('Team');
+  const teamIdx = headerRow.indexOf('Team');
   const emailIdx = headerRow.indexOf('Email');
-  const empIdx   = headerRow.indexOf('Employee');
+  const empIdx = headerRow.indexOf('Employee');
   if (teamIdx < 0 || emailIdx < 0 || empIdx < 0) {
     alert('Missing key columns.');
     return;
@@ -114,7 +119,7 @@ function onGeneratePreview() {
     .map(r => {
       const obj = {
         [headerRow[emailIdx]]: r[emailIdx],
-        [headerRow[empIdx]]:   r[empIdx]
+        [headerRow[empIdx]]: r[empIdx]
       };
       dateIndices.forEach((ci, j) => {
         obj[labelsFull[j]] = r[ci] || '';
@@ -129,16 +134,21 @@ function onGeneratePreview() {
   }
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  const thr   = document.createElement('tr');
+  const thr = document.createElement('tr');
   selectedHeaders.forEach(h => {
-    const th = document.createElement('th'); th.textContent = h; thr.appendChild(th);
+    const th = document.createElement('th');
+    th.textContent = h;
+    thr.appendChild(th);
   });
-  thead.appendChild(thr); table.appendChild(thead);
+  thead.appendChild(thr);
+  table.appendChild(thead);
   const tbody = document.createElement('tbody');
   scheduleData.forEach(r => {
     const tr = document.createElement('tr');
     selectedHeaders.forEach(h => {
-      const td = document.createElement('td'); td.textContent = r[h] || ''; tr.appendChild(td);
+      const td = document.createElement('td');
+      td.textContent = r[h] || '';
+      tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
