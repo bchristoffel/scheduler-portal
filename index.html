@@ -6,10 +6,17 @@
 </head>
 <body>
   <h1>Schedule Mailer</h1>
+
+  <label>Week Start: <input type="date" id="weekStart" /></label>
+  <label>Week End:   <input type="date" id="weekEnd"   /></label>
+  <br/><br/>
+
   <input type="file" id="fileInput" accept=".xlsx"/>
   <div id="preview"></div>
   <button id="sendAll" disabled>Send All</button>
+
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
+
 </html>
