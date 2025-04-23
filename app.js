@@ -3,10 +3,10 @@
 // Helper: format a Date (UTC) as 'DD-MMM-YY'
 function formatDateUTC(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = String(d.getUTCDate()).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(1, '0');
   const mon = months[d.getUTCMonth()];
   const yy  = String(d.getUTCFullYear()).slice(-2);
-  return `${mon} ${day} ${yy}`;
+  return `${mon} ${day} ${yyyy}`;
 }
 
 // Globals for workbook and schedule data
