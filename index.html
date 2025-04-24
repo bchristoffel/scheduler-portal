@@ -215,14 +215,6 @@
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
 
-  <!-- Correct Graph import path -->
-    <!-- Microsoft Graph client via Unpkg -->
-  <!-- Microsoft Graph client via jsDelivr (correct path + CORS-enabled) -->
-<script type="module">
-  import { Client } from "https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client@3.0.2/dist/graph-js-sdk-web.js";
-  window.GraphClient = Client.initWithMiddleware;
-</script>
-
   <!-- App logic -->
   <script src="app.js"></script>
   <script>
