@@ -214,8 +214,15 @@ function renderEmailPage() {
       const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
       tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
     });
-    tbl += `</tr></thead><tbody><tr>
-      <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
+    tbl += `</tr>
+<tr><th></th>`;
+selectedHeaders.slice(2).forEach(h => {
+  const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
+  tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
+});
+tbl += `</tr></thead><tbody>
+<tr>
+  <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
     selectedHeaders.slice(2).forEach(h => {
       tbl += `<td style="border:1px solid #ddd;padding:6px;">${r[h] || ""}</td>`;
     });
@@ -309,7 +316,15 @@ async function onSendAll() {
     });
     tbl += `</tr></thead><tbody>
   <tr>
-    <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
+    tbl += `</tr>
+<tr><th></th>`;
+selectedHeaders.slice(2).forEach(h => {
+  const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
+  tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
+});
+tbl += `</tr></thead><tbody>
+<tr>
+  <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
     selectedHeaders.slice(2).forEach(h => {
       tbl += `<td style="border:1px solid #ddd;padding:6px;">${r[h] || ""}</td>`;
     });
