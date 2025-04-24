@@ -11,15 +11,31 @@ const loginRequest = { scopes: ["Mail.Send"] };
 
 async function ensureToken() {
   let account = msalInstance.getAllAccounts()[0];
+
   if (!account) {
     const loginRes = await msalInstance.loginPopup(loginRequest);
     account = loginRes.account;
   }
-  const tokenRes = await msalInstance.acquireTokenSilent({
-    account,
-    scopes: loginRequest.scopes
-  });
-  return tokenRes.accessToken;
+
+  try {
+    const tokenRes = await msalInstance.acquireTokenSilent({
+      account,
+      scopes: loginRequest.scopes
+    });
+    return tokenRes.accessToken;
+  } catch (err) {
+    // Fallback if token is not found or expired
+    if (err instanceof msal.InteractionRequiredAuthError) {
+      const tokenRes = await msalInstance.acquireTokenPopup({
+        scopes: loginRequest.scopes,
+        account
+      });
+      return tokenRes.accessToken;
+    } else {
+      console.error("Token acquisition failed:", err);
+      throw err;
+    }
+  }
 }
 
 // — Date formatting —
