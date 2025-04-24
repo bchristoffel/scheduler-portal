@@ -5,11 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Schedule Mailer</title>
 
-  <link rel="icon" href=".AW_DIMENSIONAL_BLACK_VER_2024.png" type="image/png" />
+  <!-- Favicon (new logo icon) -->
+  <link rel="icon" href="./favicon.png" type="image/png" />
+
+  <!-- Dependencies -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <script defer src="app.js"></script>
 
+  <!-- Styles -->
   <style>
     :root {
       --mint: #76C7B7;
@@ -186,6 +190,27 @@
     #emailPreview table th {
       text-align: center;
     }
+
+    /* Confirmation */
+    #confirmation {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    #confirmation .panel {
+      background: var(--white);
+      margin: 4rem auto;
+      padding: 2rem;
+      max-width: 500px;
+      text-align: center;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    #confirmation h2 {
+      color: green;
+    }
   </style>
 </head>
 
@@ -201,6 +226,7 @@
       <button class="tablinks" data-tab="emails">Emails</button>
     </div>
 
+    <!-- Weekly Tab -->
     <div id="weekly" class="tabcontent active">
       <div class="field-group">
         <label for="weekStart">Week Start:</label>
@@ -220,6 +246,7 @@
       <div id="preview"></div>
     </div>
 
+    <!-- Email Tab -->
     <div id="emails" class="tabcontent">
       <div class="button-group">
         <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
@@ -229,8 +256,18 @@
 
       <div id="emailPreview"></div>
     </div>
+
+    <!-- Confirmation Panel -->
+    <div id="confirmation">
+      <div class="panel">
+        <h2>✅ All Emails Sent!</h2>
+        <p>Your schedule emails have been sent successfully.</p>
+        <button class="button" onclick="location.reload()">🔄 Refresh App</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Tab Switcher -->
   <script>
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -241,9 +278,5 @@
       });
     });
   </script>
-  <div id="confirmation" style="display:none; text-align:center; margin-top:2rem;">
-  <h2>✅ All Emails Sent!</h2>
-  <button class="button" onclick="location.reload()">Refresh App</button>
-</div>
 </body>
 </html>
