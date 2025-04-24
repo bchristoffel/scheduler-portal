@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Schedule Mailer</title>
 
   <link rel="icon" href="./AW_DIMENSIONAL_BLACK_HOR_2024.png" type="image/png" />
@@ -156,18 +156,18 @@
       border-radius: var(--radius);
     }
 
-    #preview table {
+    #preview table, #emailPreview table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 1rem;
     }
 
-    #preview th, #preview td {
+    #preview th, #preview td, #emailPreview th, #emailPreview td {
       border: 1px solid var(--gray-lines);
       padding: 0.6rem 0.8rem;
     }
 
-    #preview th {
+    #preview th, #emailPreview th {
       background: #fafafa;
     }
 
@@ -224,6 +224,7 @@
       <div class="button-group">
         <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
         <button id="sendAll" class="button" disabled>Send All</button>
+        <button id="logoutBtn" class="button" style="background:#ccc;color:#000;">Logout</button>
       </div>
 
       <div id="emailPreview"></div>
@@ -231,7 +232,6 @@
   </div>
 
   <script>
-    // Tabs
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
