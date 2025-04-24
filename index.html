@@ -102,6 +102,93 @@
       display: block;
     }
 
+    .field-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .field-group label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: 500;
+    }
+
+    .field-group input[type="date"],
+    .field-group input[type="file"] {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--gray-lines);
+      border-radius: var(--radius);
+      font-size: 1rem;
+      display: block;
+    }
+
+    .field-group input[type="date"] {
+      width: 170px;
+    }
+
+    .button-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .button {
+      background: var(--mint);
+      border: none;
+      color: var(--white);
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+      margin-right: 0.5rem;
+    }
+
+    .button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .button:hover:not(:disabled) {
+      background: var(--mint-dark);
+      transform: translateY(-1px);
+    }
+
+    #preview, #emailPreview {
+      background: var(--gray-bg);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      overflow-x: auto;
+    }
+
+    #preview table, #emailPreview table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    #preview th, #preview td, #emailPreview th, #emailPreview td {
+      border: 1px solid var(--gray-lines);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    #preview th, #emailPreview th {
+      background-color: #f0f0f0;
+      font-weight: 600;
+    }
+
+    .email-card {
+      background: var(--gray-bg);
+      border: 1px solid var(--gray-lines);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .email-card h3 {
+      margin-top: 0;
+    }
+
     #confirmation {
       display: none;
       position: fixed;
@@ -140,13 +227,13 @@
     }
   </style>
 </head>
-
 <body>
   <div class="container">
     <div class="header-row">
       <img src="./AW_DIMENSIONAL_BLACK_VER_2024.png" alt="Logo" class="logo" />
       <h1>Schedule Mailer</h1>
     </div>
+
     <div class="tabs">
       <button class="tablinks active" data-tab="weekly">Weekly Template</button>
       <button class="tablinks" data-tab="emails">Emails</button>
@@ -193,7 +280,7 @@
     </div>
   </div>
 
-  <!-- Tab Switching -->
+  <!-- Tab Switch Logic -->
   <script>
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -204,7 +291,7 @@
       });
     });
 
-    // Reset confirmation visibility on reload
+    // Reset confirmation modal on page load
     window.addEventListener('load', () => {
       document.getElementById("confirmation").style.display = "none";
     });
