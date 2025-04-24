@@ -70,6 +70,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sendAllBtn.addEventListener("click", onSendAll);
 
+  // Confirmation modal controls
+  document.getElementById("closeConfirmation").addEventListener("click", () => {
+    document.getElementById("confirmation").style.display = "none";
+  });
+
+  document.getElementById("refreshApp").addEventListener("click", () => {
+    document.getElementById("confirmation").style.display = "none";
+    window.location.reload();
+  });
+
+  // Logout
   document.getElementById("logoutBtn").addEventListener("click", () => {
     const account = msalInstance.getAllAccounts()[0];
     if (account) {
@@ -83,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// — Helpers —
+// Helpers
 function formatDateShort(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${m[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2,"0")} ${String(d.getUTCFullYear()).slice(-2)}`;
@@ -96,7 +107,6 @@ function formatDateFull(d) {
 let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
 let scheduleData = [], selectedHeaders = [];
 let emailPage = 1, emailsPerPage = 10;
-
 function onFileLoad(fi, genBtn, copyBtn, preview) {
   const file = fi.files[0]; if (!file) return;
   const reader = new FileReader();
@@ -184,91 +194,14 @@ function onGeneratePreview(wsInput, genBtn, copyBtn, preview) {
   const cb = document.getElementById("copyAll");
   if (cb) cb.style.display = "inline-block";
 }
-function renderEmailPage() {
-  const emailPreview = document.getElementById("emailPreview");
-  const sendAllBtn = document.getElementById("sendAll");
-  emailPreview.innerHTML = "";
 
-  const total = scheduleData.length;
-  const pages = Math.ceil(total / emailsPerPage);
-  const startIdx = (emailPage - 1) * emailsPerPage;
-  const pageData = scheduleData.slice(startIdx, startIdx + emailsPerPage);
-
-  pageData.forEach(r => {
-    const toAddr = r[selectedHeaders[0]];
-    const name = r[selectedHeaders[1]];
-    const subject = "Schedule";
-
-    let tbl = `<table style="border-collapse:collapse;width:100%;margin:1em 0;">
-      <thead><tr><th></th>`;
-    selectedHeaders.slice(2).forEach(h => {
-      tbl += `<th style="border:1px solid #ddd;padding:6px;">${h}</th>`;
-    });
-    tbl += `</tr><tr><th></th>`;
-    selectedHeaders.slice(2).forEach(h => {
-      const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
-      tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
-    });
-    tbl += `</tr></thead><tbody><tr>
-      <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
-    selectedHeaders.slice(2).forEach(h => {
-      tbl += `<td style="border:1px solid #ddd;padding:6px;">${r[h] || ""}</td>`;
-    });
-    tbl += `</tr></tbody></table>`;
-
-    const bodyHtml = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#333;">
-      <p>Hi Team &ndash;</p>
-      <p>Please see your schedule for next week below. If you have any questions, let us know.</p>
-      ${tbl}
-      <p>Thank you!</p>
-    </div>`;
-
-    const card = document.createElement("div");
-    card.className = "email-card";
-    card.innerHTML = `
-      <h3>To: ${toAddr}</h3>
-      <p><strong>Subject:</strong> ${subject}</p>
-      ${bodyHtml}
-    `;
-    emailPreview.appendChild(card);
-  });
-
-  renderPaginationControls(pages);
-  sendAllBtn.disabled = false;
-}
-
-function renderPaginationControls(totalPages) {
-  const emailPreview = document.getElementById("emailPreview");
-  let pg = document.getElementById("emailPagination");
-  if (pg) pg.remove();
-  pg = document.createElement("div");
-  pg.id = "emailPagination";
-  pg.style.textAlign = "center";
-
-  const prev = document.createElement("button");
-  prev.className = "button";
-  prev.textContent = "← Prev";
-  prev.disabled = emailPage === 1;
-  prev.onclick = () => {
-    emailPage--;
-    renderEmailPage();
-  };
-
-  const info = document.createElement("span");
-  info.textContent = ` Page ${emailPage} of ${totalPages} `;
-  info.style.margin = "0 1em";
-
-  const next = document.createElement("button");
-  next.className = "button";
-  next.textContent = "Next →";
-  next.disabled = emailPage === totalPages;
-  next.onclick = () => {
-    emailPage++;
-    renderEmailPage();
-  };
-
-  pg.append(prev, info, next);
-  emailPreview.parentNode.insertBefore(pg, emailPreview);
+function onCopyAll(preview) {
+  const tbl = preview.querySelector("table");
+  if (!tbl) return;
+  const range = document.createRange(); range.selectNode(tbl);
+  const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  document.execCommand("copy"); sel.removeAllRanges();
+  alert("Preview table copied!");
 }
 
 async function onSendAll() {
@@ -285,9 +218,12 @@ async function onSendAll() {
     return;
   }
 
+  let failedCount = 0;
+
   for (const r of scheduleData) {
     const toAddr = r[selectedHeaders[0]];
     const name = r[selectedHeaders[1]];
+    const subject = "Schedule";
 
     let tbl = `<table style="border-collapse:collapse;width:100%;margin:1em 0;"><thead><tr><th></th>`;
     selectedHeaders.slice(2).forEach(h => {
@@ -313,7 +249,7 @@ async function onSendAll() {
     </div>`;
 
     const message = {
-      subject: "Schedule",
+      subject: subject,
       body: { contentType: "html", content: bodyHtml },
       toRecipients: [{ emailAddress: { address: toAddr } }]
     };
@@ -328,11 +264,15 @@ async function onSendAll() {
     });
 
     if (!response.ok) {
+      failedCount++;
       console.error(`❌ Failed to send to ${toAddr}`, await response.text());
     }
   }
 
-  alert(`✅ Successfully sent ${scheduleData.length} emails!`);
+  if (failedCount === 0) {
+    document.querySelector(".tabcontent.active").style.display = "none";
+    document.getElementById("confirmation").style.display = "flex";
+  } else {
+    alert(`⚠️ ${failedCount} of ${scheduleData.length} emails failed. See console.`);
+  }
 }
-document.querySelector(".tabcontent.active").style.display = "none";
-document.getElementById("confirmation").style.display = "block";
