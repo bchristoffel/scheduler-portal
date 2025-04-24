@@ -71,11 +71,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function ensureToken() {
-  let account = msalInstance.getAllAccounts()[0];
-  if (!account) {
-    const loginRes = await msalInstance.loginPopup(loginRequest);
-    account = loginRes.account;
-  }
+  const loginResponse = await msalInstance.loginPopup({ scopes: ["Mail.Send"] });
+  const account = loginResponse.account;
+
+  const tokenRes = await msalInstance.acquireTokenSilent({
+    account,
+    scopes: ["Mail.Send"]
+  });
+
+  return tokenRes.accessToken;
+}
 
   try {
     const tokenRes = await msalInstance.acquireTokenSilent({
