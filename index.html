@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Schedule Mailer</title>
 
-  <!-- Favicon (new logo icon) -->
-  <img src="./AW_DIMENSIONAL_BLACK_VER_2024.png" alt="Logo" class="logo" />
-
+ <img src="./AW_DIMENSIONAL_BLACK_VER_2024.png" alt="Logo" class="logo" />
+  
   <!-- Dependencies -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <script defer src="app.js"></script>
 
-  <!-- Styles -->
   <style>
     :root {
       --mint: #76C7B7;
@@ -32,7 +30,7 @@
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, Arial, sans-serif;
       background:
-        linear-gradient(var(--midnight),var(--midnight)),
+        linear-gradient(var(--midnight), var(--midnight)),
         url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1920&q=80')
         no-repeat center/cover;
       display: flex;
@@ -153,7 +151,6 @@
       background: var(--mint-dark);
       transform: translateY(-1px);
     }
-
     #preview, #emailPreview {
       background: var(--gray-bg);
       padding: 1rem;
@@ -187,58 +184,49 @@
       margin-top: 0;
     }
 
-    #emailPreview table th {
-      text-align: center;
-    }
-
-    /* Confirmation */
     #confirmation {
       display: none;
-      text-align: center;
-      padding: 2rem;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     #confirmation .panel {
       background: var(--white);
-      margin: 4rem auto;
       padding: 2rem;
-      max-width: 500px;
-      text-align: center;
       border-radius: var(--radius);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      position: relative;
     }
 
     #confirmation h2 {
       color: green;
+      margin-top: 0;
     }
-    #confirmation {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0,0,0,0.4);
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-#confirmation .panel {
-  background: var(--white);
-  padding: 2rem;
-  border-radius: var(--radius);
-  text-align: center;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  position: relative;
-}
+    #closeConfirmation {
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 
 <body>
   <div class="container">
     <div class="header-row">
-      <img src="./AW_DIMENSIONAL_BLACK_HOR_2024.png" alt="Logo" class="logo" />
+      <img src="./AW_DIMENSIONAL_BLACK_VER_2024.png" alt="Logo" class="logo" />
       <h1>Schedule Mailer</h1>
     </div>
 
@@ -267,28 +255,28 @@
       <div id="preview"></div>
     </div>
 
-    <!-- Email Tab -->
+    <!-- Emails Tab -->
     <div id="emails" class="tabcontent">
       <div class="button-group">
         <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
         <button id="sendAll" class="button" disabled>Send All</button>
         <button id="logoutBtn" class="button" style="background:#ccc;color:#000;">Logout</button>
       </div>
-
       <div id="emailPreview"></div>
     </div>
 
-    <!-- Confirmation Panel -->
-    <div id="confirmation" style="display:none;">
-  <div class="panel">
-    <button id="closeConfirmation" style="float:right; background:none; border:none; font-size:1.5rem; cursor:pointer;">×</button>
-    <h2 style="color: green;">✅ All Emails Sent!</h2>
-    <p>Your schedule emails have been sent successfully.</p>
-    <button class="button" id="refreshApp">🔄 Refresh App</button>
+    <!-- Confirmation Modal -->
+    <div id="confirmation">
+      <div class="panel">
+        <button id="closeConfirmation">×</button>
+        <h2>✅ All Emails Sent!</h2>
+        <p>Your schedule emails have been sent successfully.</p>
+        <button class="button" id="refreshApp">🔄 Refresh App</button>
+      </div>
+    </div>
   </div>
-</div>
 
-  <!-- Tab Switcher -->
+  <!-- Tab Switching -->
   <script>
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
