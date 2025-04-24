@@ -334,3 +334,5 @@ async function onSendAll() {
 
   alert(`✅ Successfully sent ${scheduleData.length} emails!`);
 }
+document.querySelector(".tabcontent.active").style.display = "none";
+document.getElementById("confirmation").style.display = "block";
