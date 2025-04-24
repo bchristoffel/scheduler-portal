@@ -1,4 +1,3 @@
-// — MSAL setup —
 const msalConfig = {
   auth: {
     clientId: "5c90a7aa-6318-49bb-a0ab-aaccdca24ca6",
@@ -6,10 +5,10 @@ const msalConfig = {
     redirectUri: window.location.origin + window.location.pathname
   }
 };
+
 const msalInstance = new msal.PublicClientApplication(msalConfig);
 const loginRequest = { scopes: ["Mail.Send"] };
 
-// Globals
 let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
 let scheduleData = [], selectedHeaders = [];
 let emailPage = 1, emailsPerPage = 10;
@@ -73,34 +72,14 @@ document.addEventListener("DOMContentLoaded", () => {
 async function ensureToken() {
   const loginResponse = await msalInstance.loginPopup({ scopes: ["Mail.Send"] });
   const account = loginResponse.account;
-
   const tokenRes = await msalInstance.acquireTokenSilent({
     account,
     scopes: ["Mail.Send"]
   });
-
   return tokenRes.accessToken;
 }
 
-  try {
-    const tokenRes = await msalInstance.acquireTokenSilent({
-      account,
-      scopes: loginRequest.scopes
-    });
-    return tokenRes.accessToken;
-  } catch (err) {
-    if (err instanceof msal.InteractionRequiredAuthError) {
-      const tokenRes = await msalInstance.acquireTokenPopup({
-        scopes: loginRequest.scopes,
-        account
-      });
-      return tokenRes.accessToken;
-    } else {
-      console.error("Token acquisition failed:", err);
-      throw err;
-    }
-  }
-}
+
 
 function formatDateShort(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -199,6 +178,7 @@ function onGeneratePreview(wsInput, genBtn, copyBtn, preview) {
   const cb = document.getElementById("copyAll");
   if (cb) cb.style.display = "inline-block";
 }
+
 function onCopyAll(preview) {
   const tbl = preview.querySelector("table");
   if (!tbl) return;
@@ -207,6 +187,8 @@ function onCopyAll(preview) {
   document.execCommand("copy"); sel.removeAllRanges();
   alert("Preview table copied!");
 }
+
+
 
 function renderEmailPage() {
   const emailPreview = document.getElementById("emailPreview");
