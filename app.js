@@ -9,33 +9,6 @@ const msalConfig = {
 const msalInstance = new msal.PublicClientApplication(msalConfig);
 const loginRequest = { scopes: ["Mail.Send"] };
 
-async function ensureToken() {
-  let account = msalInstance.getAllAccounts()[0];
-  if (!account) {
-    const loginRes = await msalInstance.loginPopup(loginRequest);
-    account = loginRes.account;
-  }
-
-  try {
-    const tokenRes = await msalInstance.acquireTokenSilent({
-      account,
-      scopes: loginRequest.scopes
-    });
-    return tokenRes.accessToken;
-  } catch (err) {
-    if (err instanceof msal.InteractionRequiredAuthError) {
-      const tokenRes = await msalInstance.acquireTokenPopup({
-        scopes: loginRequest.scopes,
-        account
-      });
-      return tokenRes.accessToken;
-    } else {
-      console.error("Token acquisition failed:", err);
-      throw err;
-    }
-  }
-}
-
 // Globals
 let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
 let scheduleData = [], selectedHeaders = [];
@@ -97,7 +70,32 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+async function ensureToken() {
+  let account = msalInstance.getAllAccounts()[0];
+  if (!account) {
+    const loginRes = await msalInstance.loginPopup(loginRequest);
+    account = loginRes.account;
+  }
 
+  try {
+    const tokenRes = await msalInstance.acquireTokenSilent({
+      account,
+      scopes: loginRequest.scopes
+    });
+    return tokenRes.accessToken;
+  } catch (err) {
+    if (err instanceof msal.InteractionRequiredAuthError) {
+      const tokenRes = await msalInstance.acquireTokenPopup({
+        scopes: loginRequest.scopes,
+        account
+      });
+      return tokenRes.accessToken;
+    } else {
+      console.error("Token acquisition failed:", err);
+      throw err;
+    }
+  }
+}
 
 function formatDateShort(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -196,7 +194,6 @@ function onGeneratePreview(wsInput, genBtn, copyBtn, preview) {
   const cb = document.getElementById("copyAll");
   if (cb) cb.style.display = "inline-block";
 }
-
 function onCopyAll(preview) {
   const tbl = preview.querySelector("table");
   if (!tbl) return;
@@ -205,6 +202,7 @@ function onCopyAll(preview) {
   document.execCommand("copy"); sel.removeAllRanges();
   alert("Preview table copied!");
 }
+
 function renderEmailPage() {
   const emailPreview = document.getElementById("emailPreview");
   const sendAllBtn = document.getElementById("sendAll");
@@ -364,6 +362,3 @@ async function onSendAll() {
     alert(`⚠️ ${failedCount} of ${scheduleData.length} emails failed. See console.`);
   }
 }
-
-
-
