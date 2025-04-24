@@ -78,9 +78,6 @@ async function ensureToken() {
   });
   return tokenRes.accessToken;
 }
-
-
-
 function formatDateShort(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${m[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2,"0")} ${String(d.getUTCFullYear()).slice(-2)}`;
@@ -153,6 +150,8 @@ function onGeneratePreview(wsInput, genBtn, copyBtn, preview) {
 
   const table = document.createElement("table");
   const thead = document.createElement("thead");
+
+  // Header row: Email, Name, Date labels
   const thr = document.createElement("tr");
   selectedHeaders.forEach(h => {
     const th = document.createElement("th");
@@ -160,6 +159,20 @@ function onGeneratePreview(wsInput, genBtn, copyBtn, preview) {
     thr.appendChild(th);
   });
   thead.appendChild(thr);
+
+  // Header row 2: Day of week labels
+  const dayRow = document.createElement("tr");
+  selectedHeaders.forEach((h, i) => {
+    const th = document.createElement("th");
+    if (i < 2) {
+      th.textContent = "";
+    } else {
+      const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
+      th.textContent = dn;
+    }
+    dayRow.appendChild(th);
+  });
+  thead.appendChild(dayRow);
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
@@ -187,9 +200,6 @@ function onCopyAll(preview) {
   document.execCommand("copy"); sel.removeAllRanges();
   alert("Preview table copied!");
 }
-
-
-
 function renderEmailPage() {
   const emailPreview = document.getElementById("emailPreview");
   const sendAllBtn = document.getElementById("sendAll");
@@ -209,18 +219,13 @@ function renderEmailPage() {
     selectedHeaders.slice(2).forEach(h => {
       tbl += `<th style="border:1px solid #ddd;padding:6px;">${h}</th>`;
     });
-    tbl += `</tr><tr><th></th>`;
+    tbl += `</tr>
+<tr><th></th>`;
     selectedHeaders.slice(2).forEach(h => {
       const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
       tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
     });
-    tbl += `</tr>
-<tr><th></th>`;
-selectedHeaders.slice(2).forEach(h => {
-  const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
-  tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
-});
-tbl += `</tr></thead><tbody>
+    tbl += `</tr></thead><tbody>
 <tr>
   <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
     selectedHeaders.slice(2).forEach(h => {
@@ -309,20 +314,13 @@ async function onSendAll() {
     selectedHeaders.slice(2).forEach(h => {
       tbl += `<th style="border:1px solid #ddd;padding:6px;">${h}</th>`;
     });
-    tbl += `</tr><tr><th></th>`;
+    tbl += `</tr>
+<tr><th></th>`;
     selectedHeaders.slice(2).forEach(h => {
       const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
       tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
     });
     tbl += `</tr></thead><tbody>
-  <tr>
-    tbl += `</tr>
-<tr><th></th>`;
-selectedHeaders.slice(2).forEach(h => {
-  const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
-  tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
-});
-tbl += `</tr></thead><tbody>
 <tr>
   <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
     selectedHeaders.slice(2).forEach(h => {
