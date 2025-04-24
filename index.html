@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Schedule Mailer</title>
 
-  <!-- Make sure this matches your uploaded file name exactly -->
   <link rel="icon" href="./AW_DIMENSIONAL_BLACK_VER_2024.png" type="image/png" />
 
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -114,7 +113,7 @@
 
     .field-group input[type="date"],
     .field-group input[type="file"] {
-      padding: 0.4rem 0.6rem;
+      padding: 0.4rem  0.6rem;
       border: 1px solid var(--gray-lines);
       border-radius: var(--radius);
       font-size: 1rem;
@@ -227,7 +226,10 @@
     }
   </style>
 </head>
-<body>
+
+
+
+  <body>
   <div class="container">
     <div class="header-row">
       <img src="./AW_DIMENSIONAL_BLACK_VER_2024.png" alt="Logo" class="logo" />
@@ -239,7 +241,7 @@
       <button class="tablinks" data-tab="emails">Emails</button>
     </div>
 
-    <!-- Weekly Tab -->
+    <!-- Weekly Template Tab -->
     <div id="weekly" class="tabcontent active">
       <div class="field-group">
         <label for="weekStart">Week Start:</label>
@@ -259,7 +261,7 @@
       <div id="preview"></div>
     </div>
 
-    <!-- Emails Tab -->
+    <!-- Email Draft Tab -->
     <div id="emails" class="tabcontent">
       <div class="button-group">
         <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
@@ -270,7 +272,7 @@
     </div>
 
     <!-- Confirmation Modal -->
-    <div id="confirmation">
+    <div id="confirmation" style="display: none;">
       <div class="panel">
         <button id="closeConfirmation">×</button>
         <h2>✅ All Emails Sent!</h2>
@@ -280,7 +282,7 @@
     </div>
   </div>
 
-  <!-- Tab Switch Logic -->
+  <!-- Tab Toggle Logic -->
   <script>
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -291,7 +293,6 @@
       });
     });
 
-    // Reset confirmation modal on page load
     window.addEventListener('load', () => {
       document.getElementById("confirmation").style.display = "none";
     });
