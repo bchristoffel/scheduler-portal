@@ -70,7 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sendAllBtn.addEventListener("click", onSendAll);
 
-  // Confirmation modal controls
   document.getElementById("closeConfirmation").addEventListener("click", () => {
     document.getElementById("confirmation").style.display = "none";
   });
@@ -80,7 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.reload();
   });
 
-  // Logout
   document.getElementById("logoutBtn").addEventListener("click", () => {
     const account = msalInstance.getAllAccounts()[0];
     if (account) {
@@ -94,19 +92,20 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Helpers
+// (declare all global variables)
+let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
+let scheduleData = [], selectedHeaders = [];
+let emailPage = 1, emailsPerPage = 10;
 function formatDateShort(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${m[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2,"0")} ${String(d.getUTCFullYear()).slice(-2)}`;
 }
+
 function formatDateFull(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${m[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2,"0")} ${d.getUTCFullYear()}`;
 }
 
-let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
-let scheduleData = [], selectedHeaders = [];
-let emailPage = 1, emailsPerPage = 10;
 function onFileLoad(fi, genBtn, copyBtn, preview) {
   const file = fi.files[0]; if (!file) return;
   const reader = new FileReader();
