@@ -36,6 +36,11 @@ async function ensureToken() {
   }
 }
 
+// Globals
+let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
+let scheduleData = [], selectedHeaders = [];
+let emailPage = 1, emailsPerPage = 10;
+
 document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("fileInput");
   const weekStartInput = document.getElementById("weekStart");
@@ -92,10 +97,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// (declare all global variables)
-let workbookGlobal, dateRow = [], headerRow = [], rawRows = [];
-let scheduleData = [], selectedHeaders = [];
-let emailPage = 1, emailsPerPage = 10;
+
+
 function formatDateShort(d) {
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${m[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2,"0")} ${String(d.getUTCFullYear()).slice(-2)}`;
@@ -115,7 +118,7 @@ function onFileLoad(fi, genBtn, copyBtn, preview) {
     const ws = wb.Sheets["Schedule"];
     if (!ws) return alert("Schedule tab not found");
     const arr = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
-    const hi = arr.findIndex(r=> r.includes("Team") && r.includes("Email") && r.includes("Employee"));
+    const hi = arr.findIndex(r => r.includes("Team") && r.includes("Email") && r.includes("Employee"));
     if (hi < 0) return alert("Header row not detected");
     dateRow = (arr[hi - 1] || []).map(c => {
       const d = new Date(c);
@@ -202,6 +205,92 @@ function onCopyAll(preview) {
   document.execCommand("copy"); sel.removeAllRanges();
   alert("Preview table copied!");
 }
+function renderEmailPage() {
+  const emailPreview = document.getElementById("emailPreview");
+  const sendAllBtn = document.getElementById("sendAll");
+  emailPreview.innerHTML = "";
+
+  const total = scheduleData.length;
+  const pages = Math.ceil(total / emailsPerPage);
+  const startIdx = (emailPage - 1) * emailsPerPage;
+  const pageData = scheduleData.slice(startIdx, startIdx + emailsPerPage);
+
+  pageData.forEach(r => {
+    const toAddr = r[selectedHeaders[0]];
+    const name = r[selectedHeaders[1]];
+    const subject = "Schedule";
+
+    let tbl = `<table style="border-collapse:collapse;width:100%;margin:1em 0;"><thead><tr><th></th>`;
+    selectedHeaders.slice(2).forEach(h => {
+      tbl += `<th style="border:1px solid #ddd;padding:6px;">${h}</th>`;
+    });
+    tbl += `</tr><tr><th></th>`;
+    selectedHeaders.slice(2).forEach(h => {
+      const dn = new Date(h).toLocaleDateString("en-US", { weekday: "long" });
+      tbl += `<th style="border:1px solid #ddd;padding:6px;">${dn}</th>`;
+    });
+    tbl += `</tr></thead><tbody><tr>
+      <td rowspan="3" style="border:1px solid #ddd;padding:6px;font-weight:600;text-align:center;vertical-align:middle;">${name}</td>`;
+    selectedHeaders.slice(2).forEach(h => {
+      tbl += `<td style="border:1px solid #ddd;padding:6px;">${r[h] || ""}</td>`;
+    });
+    tbl += `</tr></tbody></table>`;
+
+    const bodyHtml = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#333;">
+      <p>Hi Team &ndash;</p>
+      <p>Please see your schedule for next week below. If you have any questions, let us know.</p>
+      ${tbl}
+      <p>Thank you!</p>
+    </div>`;
+
+    const card = document.createElement("div");
+    card.className = "email-card";
+    card.innerHTML = `
+      <h3>To: ${toAddr}</h3>
+      <p><strong>Subject:</strong> ${subject}</p>
+      ${bodyHtml}
+    `;
+    emailPreview.appendChild(card);
+  });
+
+  renderPaginationControls(pages);
+  sendAllBtn.disabled = false;
+}
+
+function renderPaginationControls(totalPages) {
+  const emailPreview = document.getElementById("emailPreview");
+  let pg = document.getElementById("emailPagination");
+  if (pg) pg.remove();
+  pg = document.createElement("div");
+  pg.id = "emailPagination";
+  pg.style.textAlign = "center";
+  pg.style.marginTop = "1rem";
+
+  const prev = document.createElement("button");
+  prev.className = "button";
+  prev.textContent = "← Prev";
+  prev.disabled = emailPage === 1;
+  prev.onclick = () => {
+    emailPage--;
+    renderEmailPage();
+  };
+
+  const info = document.createElement("span");
+  info.textContent = ` Page ${emailPage} of ${totalPages} `;
+  info.style.margin = "0 1em";
+
+  const next = document.createElement("button");
+  next.className = "button";
+  next.textContent = "Next →";
+  next.disabled = emailPage === totalPages;
+  next.onclick = () => {
+    emailPage++;
+    renderEmailPage();
+  };
+
+  pg.append(prev, info, next);
+  emailPreview.parentNode.insertBefore(pg, emailPreview.nextSibling);
+}
 
 async function onSendAll() {
   if (!scheduleData.length) return;
@@ -275,3 +364,6 @@ async function onSendAll() {
     alert(`⚠️ ${failedCount} of ${scheduleData.length} emails failed. See console.`);
   }
 }
+
+
+
