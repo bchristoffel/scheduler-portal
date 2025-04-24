@@ -5,20 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Schedule Mailer</title>
 
-  <!-- Favicon (avoids 404) -->
   <link rel="icon" href="./AW_DIMENSIONAL_BLACK_HOR_2024.png" type="image/png" />
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <script defer src="app.js"></script>
 
   <style>
     :root {
-      --mint:          #76C7B7;
-      --mint-dark:     #5fa695;
-      --white:         #FFFFFF;
-      --gray-bg:       #F7F9FA;   /* lighter gray */
-      --gray-lines:    #DDDDDD;   /* grid line color */
-      --gray-dark:     #333333;
-      --midnight:      rgba(0,0,51,0.4);
-      --radius:        10px;
-      --transition:    0.25s ease;
+      --mint: #76C7B7;
+      --mint-dark: #5fa695;
+      --white: #FFFFFF;
+      --gray-bg: #F7F9FA;
+      --gray-lines: #DDDDDD;
+      --gray-dark: #333333;
+      --midnight: rgba(0,0,51,0.4);
+      --radius: 10px;
+      --transition: 0.25s ease;
     }
 
     body {
@@ -52,10 +54,12 @@
       align-items: flex-start;
       margin-bottom: 1rem;
     }
+
     .logo {
       max-height: 40px;
       margin-bottom: 0.5rem;
     }
+
     h1 {
       margin: 0;
       font-size: 2rem;
@@ -66,6 +70,7 @@
       border-bottom: 2px solid var(--gray-lines);
       margin-bottom: 1.5rem;
     }
+
     .tabs button {
       background: var(--gray-bg);
       border: none;
@@ -76,21 +81,35 @@
       border-top-right-radius: var(--radius);
       transition: background var(--transition);
     }
+
     .tabs button.active {
       background: var(--white);
       border-bottom: 2px solid var(--white);
       box-shadow: inset 0 3px 0 var(--mint);
     }
+
     .tabs button:hover {
       background: #e2e6e8;
     }
-    .tabcontent { display: none; }
-    .tabcontent.active { display: block; }
 
-    .field-group { margin-bottom: 1.2rem; }
-    .field-group label {
-      display: block; margin-bottom: 0.3rem; font-weight: 500;
+    .tabcontent {
+      display: none;
     }
+
+    .tabcontent.active {
+      display: block;
+    }
+
+    .field-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .field-group label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: 500;
+    }
+
     .field-group input[type="date"],
     .field-group input[type="file"] {
       padding: 0.4rem 0.6rem;
@@ -99,11 +118,15 @@
       font-size: 1rem;
       display: block;
     }
+
     .field-group input[type="date"] {
       width: 170px;
     }
 
-    .button-group { margin-bottom: 1.2rem; }
+    .button-group {
+      margin-bottom: 1.2rem;
+    }
+
     .button {
       background: var(--mint);
       border: none;
@@ -115,38 +138,39 @@
       transition: background var(--transition), transform var(--transition);
       margin-right: 0.5rem;
     }
+
     .button:disabled {
       background: #ccc;
       cursor: not-allowed;
       transform: none;
     }
+
     .button:hover:not(:disabled) {
       background: var(--mint-dark);
       transform: translateY(-1px);
     }
 
-    /* Preview panels */
     #preview, #emailPreview {
       background: var(--gray-bg);
       padding: 1rem;
       border-radius: var(--radius);
     }
 
-    /* Weekly template table with grid lines */
     #preview table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 1rem;
     }
+
     #preview th, #preview td {
       border: 1px solid var(--gray-lines);
       padding: 0.6rem 0.8rem;
     }
+
     #preview th {
       background: #fafafa;
     }
 
-    /* Email cards in their own light-gray containers */
     .email-card {
       background: var(--gray-bg);
       border: 1px solid var(--gray-lines);
@@ -154,10 +178,11 @@
       padding: 1rem;
       margin-bottom: 1.5rem;
     }
+
     .email-card h3 {
       margin-top: 0;
     }
-    /* Center headers in email draft tables */
+
     #emailPreview table th {
       text-align: center;
     }
@@ -176,49 +201,37 @@
       <button class="tablinks" data-tab="emails">Emails</button>
     </div>
 
-    <!-- Weekly Template -->
     <div id="weekly" class="tabcontent active">
       <div class="field-group">
         <label for="weekStart">Week Start:</label>
         <input type="date" id="weekStart" />
       </div>
+
       <div class="field-group">
         <label for="fileInput">Upload Schedule:</label>
         <input type="file" id="fileInput" accept=".xlsx" />
       </div>
+
       <div class="button-group">
-        <button id="generateTemplate" class="button" disabled>
-          Generate Weekly Preview
-        </button>
-        <button id="copyAll" class="button" style="display:none;">
-          Copy All
-        </button>
+        <button id="generateTemplate" class="button" disabled>Generate Weekly Preview</button>
+        <button id="copyAll" class="button" style="display:none;">Copy All</button>
       </div>
+
       <div id="preview"></div>
     </div>
 
-    <!-- Emails -->
     <div id="emails" class="tabcontent">
       <div class="button-group">
-        <button id="generateEmails" class="button" disabled>
-          Generate Email Drafts
-        </button>
-        <button id="sendAll" class="button" disabled>
-          Send All
-        </button>
+        <button id="generateEmails" class="button" disabled>Generate Email Drafts</button>
+        <button id="sendAll" class="button" disabled>Send All</button>
       </div>
+
       <div id="emailPreview"></div>
     </div>
   </div>
 
-  <!-- Dependencies -->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
-
-  <!-- App logic -->
-  <script src="app.js"></script>
   <script>
-    // Tab switching
+    // Tabs
     document.querySelectorAll('.tablinks').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
