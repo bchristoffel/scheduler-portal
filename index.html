@@ -258,14 +258,14 @@
     </div>
 
     <!-- Confirmation Panel -->
-    <div id="confirmation">
-      <div class="panel">
-        <h2>✅ All Emails Sent!</h2>
-        <p>Your schedule emails have been sent successfully.</p>
-        <button class="button" onclick="location.reload()">🔄 Refresh App</button>
-      </div>
-    </div>
+    <div id="confirmation" style="display:none;">
+  <div class="panel">
+    <button id="closeConfirmation" style="float:right; background:none; border:none; font-size:1.5rem; cursor:pointer;">×</button>
+    <h2 style="color: green;">✅ All Emails Sent!</h2>
+    <p>Your schedule emails have been sent successfully.</p>
+    <button class="button" id="refreshApp">🔄 Refresh App</button>
   </div>
+</div>
 
   <!-- Tab Switcher -->
   <script>
